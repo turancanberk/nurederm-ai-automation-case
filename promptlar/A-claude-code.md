@@ -169,3 +169,349 @@ Bana yalnızca şunları raporla:
 
 Sonunda dur ve Bölüm A'yı uygulamaya başlamak için benden onay iste.
 ````
+
+---
+
+## 02
+
+````text
+İskelet kontrolü iyi. Bölüm A'ya başlamadan önce üç küçük düzeltme yapalım.
+
+Bu promptu promptlar/A-claude-code.md dosyasına 02 numarayla ve değiştirmeden ekle.
+
+1. case-brief.md teslim artefaktı değil ve public GitHub reposunda yer almasına gerek yok.
+   - Dosyayı yerelden SİLME veya içeriğini değiştirme.
+   - Git takibinden çıkar.
+   - Henüz remote/push olmadığı için case-brief.md ilk commit geçmişinde de kalmayacak şekilde mevcut ilk commit'i uygun biçimde düzelt.
+   - Dosyanın sonraki git add işlemlerinde yanlışlıkla tekrar eklenmesini yerel Git exclude mekanizmasıyla engelle.
+   - mesajlar.json repoda kalacak; uygulamanın çalışma girdisidir.
+   - İşlem sonunda `git ls-files case-brief.md` çıktısının boş olduğunu ve case-brief.md'nin commit geçmişinde kalmadığını doğrula.
+
+2. README başlangıç zamanını resmi case başlangıcımız olan:
+   2026-09-27 13:00 (+03)
+   olarak düzelt.
+   Bitiş zamanı final aşamasında gerçek bitiş saatimizle doldurulacak.
+
+3. Bölüm A için teknoloji kararımız:
+   Node.js 18+ kullanacağız.
+   - harici npm bağımlılığı kullanma
+   - yerleşik fetch kullan
+   - test için node:assert / node:test yeterli
+   - runtime LLM veya AI API entegrasyonu yapma
+   - güvenlik ve kimlik doğrulama deterministik olacak
+
+Henüz Bölüm A kodunu yazma.
+
+Git tarafında:
+- prompt 02'nin kendisini şimdilik çalışma alanında bırakabilirsin; bir sonraki anlamlı Bölüm A commit'ine dahil edilecek.
+- case-brief.md'nin ilk commit geçmişinden çıkarıldığını doğrula.
+- remote ekleme ve push yapma.
+
+Sonunda yalnızca:
+- case-brief.md'nin artık tracked/history içinde olup olmadığını,
+- mesajlar.json'un tracked olduğunu,
+- README başlangıç saatini,
+- seçilen Node.js yaklaşımını,
+- güncel HEAD commit hash'ini,
+- git status'u
+
+raporla ve dur.
+````
+
+---
+
+## 03
+
+````text
+Bölüm A'nın zorunlu kısmını şimdi uygula.
+
+Bu promptu promptlar/A-claude-code.md dosyasına 03 numarayla ve değiştirmeden ekle.
+
+Amaç:
+mesajlar.json içindeki 15 mesajı deterministik kurallarla işle,
+DummyJSON sipariş API'sini güvenli kullan,
+talepler.json ve tek sayfalık HTML özet üret.
+
+Henüz /products/search bonusunu ekleme.
+Henüz Bölüm B'ye geçme.
+Önce Bölüm A'nın zorunlu maddelerini eksiksiz ve test edilmiş şekilde bitirelim.
+
+## Teknoloji
+
+Node.js 18+ kullan.
+Harici npm paketi kullanma.
+Yerleşik:
+- fetch
+- node:test
+- node:assert
+
+yeterli.
+
+Önerilen dosyalar:
+
+A-mesaj-otomasyonu/
+- kurallar.js
+- isle.js
+- test.js
+- talepler.json
+- ozet.html
+
+Girdi kökteki mesajlar.json olacak ve kesinlikle değiştirilmemeli.
+
+## 1. Sınıflandırma
+
+Her mesaja yalnızca şu konulardan birini ata:
+
+- urun-sorusu
+- fiyat
+- siparis-durumu
+- iade-sikayet
+- istenmeyen-etki
+- diger
+
+Çoklu niyette şu önceliği kullan:
+
+istenmeyen-etki
+> iade-sikayet
+> siparis-durumu
+> fiyat
+> urun-sorusu
+> diger
+
+İkincil niyet varsa kısa biçimde `not` alanında belirtilebilir.
+
+Actual mesajlar için beklediğim ana sınıflandırmayı testlerde açıkça doğrula:
+
+1  -> siparis-durumu
+2  -> siparis-durumu
+3  -> siparis-durumu
+4  -> istenmeyen-etki
+5  -> iade-sikayet
+6  -> siparis-durumu
+7  -> diger
+8  -> siparis-durumu  (fiyat ikincil niyet)
+9  -> urun-sorusu
+10 -> fiyat
+11 -> urun-sorusu
+12 -> diger
+13 -> urun-sorusu
+14 -> fiyat
+15 -> urun-sorusu
+
+Özellikle:
+- mesaj 7'deki `%100` ve URL sayı olarak yorumlanmamalı
+- mesaj 13'teki `200 ml` sipariş numarası sanılmamalı
+- mesaj 12'de "siparişler" kelimesi geçmesine rağmen belirli bir sipariş numarası olmadığı için siparis-durumu olarak sınıflandırma
+
+## 2. Sipariş numarası çıkarma
+
+Sadece bağlamlı sipariş numarası kalıplarını kabul et.
+
+Örn:
+- "12 numaralı sipariş"
+- "sipariş no 12"
+- "order #3"
+- benzeri açık sipariş bağlamları
+
+Mesajdaki her sayıyı sipariş numarası kabul etme.
+
+Birden fazla farklı sipariş numarası çıkarsa güvenli tarafta kal ve temsilciye devret.
+
+Sipariş numarası çıkarılamayan siparis-durumu mesajında API çağrısı yapma.
+
+## 3. Hassas konular
+
+iade-sikayet ve istenmeyen-etki için:
+
+- devret: true
+- teşhis verme
+- tedavi önerme
+- ürün önerme
+- "şunu kullan / bırak / şu ilacı al" gibi yönlendirme yapma
+- yalnızca insan temsilciye yönlendiren kısa ve güvenli cevap oluştur
+
+Özellikle mesaj 4'te "Ne yapmalıyım?" sorusuna tıbbi öneri verme.
+
+## 4. Sipariş güvenliği
+
+siparis-durumu mesajlarında:
+
+GET https://dummyjson.com/carts/{id}
+
+kullan.
+
+API'den gelen cart için sahiplik kontrolü:
+
+Number(cart.userId) === Number(musteri_id)
+
+olmadan hiçbir sipariş detayı cevap veya not alanına yazılmasın.
+
+Eşleşmiyorsa:
+- devret: true
+- ürün adı verme
+- toplam verme
+- quantity verme
+- başka müşteriyle ilgili herhangi bir alan verme
+- ham API cevabını loglama
+- teknik hata detayı müşteriye gösterme
+- güvenli biçimde "sipariş sahipliği doğrulanamadı, temsilciye aktarıldı" benzeri cevap oluştur
+
+Eşleşiyorsa:
+- devret: false
+- ürün adlarını yaz
+- istersen miktarları da yaz
+- toplam tutarı yaz
+- API'de olmayan kargo firması / kargoya verilme zamanı / teslim tarihi gibi bilgileri UYDURMA
+
+Özellikle actual veride:
+- mesaj 1 / cart 12 -> musteri_id 7 ile sahiplik eşleşmiyor; bilgi sızmamalı
+- mesaj 2 / cart 5 -> eşleşen normal akış
+- mesaj 6 / cart 3 -> İngilizce normal akış
+- mesaj 8 / cart 4 -> eşleşen sipariş akışı, fiyat sorusu ikincil niyet
+
+İngilizce mesaj 6 için mümkünse İngilizce sipariş cevap şablonu kullan.
+
+## 5. API hata davranışı
+
+404 / not found:
+- anlaşılır müşteri mesajı
+- teknik hata metni yok
+- brief bunu devret=true yapmak zorunda demiyor; devret=false kalabilir
+
+Ağ hatası / timeout / 5xx / bozuk JSON / beklenmeyen API yapısı:
+- güvenli tarafta kal
+- devret: true
+- teknik ayrıntıyı cevap_taslagi veya not içine sızdırma
+- programın tüm mesaj işlemeyi bırakmasına izin verme
+
+Fetch için makul bir timeout ekle.
+
+## 6. Diğer konular
+
+fiyat / urun-sorusu:
+- henüz /products/search bonusunu kullanma
+- API'de olmayan ürün, fiyat, içerik, cilt uygunluğu, hayvan testi bilgisi uydurma
+- kısa ve güvenli cevap taslağı üret
+- gerekiyorsa bilgi kaynağı olmadığı için temsilciden teyit edileceğini belirt
+
+diger / spam:
+- spam mesajına ürün veya sipariş cevabı üretme
+- istersen cevap_taslagi boş string olabilir
+
+## 7. talepler.json
+
+Tam 15 kayıt olmalı.
+
+Her kayıt yalnızca şu 5 alanı içersin:
+
+{
+  "id": ...,
+  "konu": "...",
+  "devret": true/false,
+  "cevap_taslagi": "...",
+  "not": "..."
+}
+
+Ham API alanlarını output'a ekleme.
+
+Özellikle userId gibi iç alanlar talepler.json'a yazılmamalı.
+
+## 8. ozet.html
+
+Tek sayfalık basit HTML üret.
+
+Zorunlu olarak:
+- toplam mesaj sayısı
+- konu bazında sayılar
+- temsilciye devredilen mesaj sayısı
+
+görünsün.
+
+Framework kullanma.
+Harici JS/CSS dependency kullanma.
+Kullanıcı verisi HTML'e yazılıyorsa HTML escape uygula.
+
+Şimdilik ekstra dashboard özellikleri ekleme; zorunlu akış geçtikten sonra ayrı promptla geliştireceğiz.
+
+## 9. Testler
+
+test.js içinde kritik davranışları gerçek assert'lerle doğrula.
+
+En az:
+- 15 actual mesajın beklenen konu sınıflandırması
+- mesaj 13'te 200'ün sipariş no sayılmaması
+- mesaj 7'de URL/%100'ün sipariş no sayılmaması
+- hassas konuların devret=true olması
+- hassas cevaplarda teşhis / ürün önerisi olmadığını kontrol eden temel test
+- sahiplik eşleşmesi / eşleşmemesi
+- eşleşmeyen siparişte ürün/toplam/userId sızıntısı olmaması
+- 404
+- ağ hatası
+- HTTP 500
+- bozuk JSON
+- yanlış cart id / beklenmeyen yapı
+- mümkünse string userId gibi tip edge-case'i
+
+Testlerde sahte fetch kullanabilirsin; her test için gerçek API'ye gitme.
+
+Sonra:
+1. node A-mesaj-otomasyonu/test.js
+2. node A-mesaj-otomasyonu/isle.js
+
+çalıştır.
+
+Canlı API run sonucunu incele.
+
+Ayrıca otomatik bir çıktı doğrulaması yap:
+- 15 kayıt var mı
+- her kayıtta yalnız 5 alan var mı
+- konu enum dışında değer var mı
+- devret boolean mı
+- hassas konular devredilmiş mi
+- eşleşmeyen sipariş bilgisinde sızıntı var mı
+- mesajlar.json değişmemiş mi
+
+Bir test başarısız olursa beklentiyi teste uydurmak için değiştirme.
+Önce hatanın sebebini bul ve gerçek davranışı düzelt.
+
+## 10. Git
+
+Her şey gerçekten çalıştıktan sonra:
+
+- git status
+- ilgili git diff
+- secret / credential / .env / node_modules kontrolü
+- case-brief.md'nin tracked olmadığını tekrar doğrula
+
+yap.
+
+Bu aşamanın çalışan Bölüm A halini commit et.
+
+Commit mesajı:
+
+feat: müşteri mesajı otomasyonunu tamamla
+
+README.md ve HANDOFF.md'yi mevcut gerçek sonuçlarla kısa biçimde güncelle.
+Prompt 02 ve 03 de bu commit'e dahil olabilir.
+
+Remote ekleme.
+Push yapma.
+
+## Sonunda raporla ve dur
+
+Bana:
+1. oluşturulan dosyaları
+2. test sayısını ve sonucunu
+3. canlı 15 mesaj sonucunu
+4. devret=true olan mesaj id'lerini
+5. konu dağılımını
+6. sipariş güvenliği test sonucunu
+7. yakaladığın hata veya düzeltmeleri
+8. git commit hash'ini
+9. git status'u
+10. Bölüm A zorunlularının tamamlanıp tamamlanmadığını
+
+raporla.
+
+Henüz /products/search bonusuna veya Bölüm B'ye geçme.
+````

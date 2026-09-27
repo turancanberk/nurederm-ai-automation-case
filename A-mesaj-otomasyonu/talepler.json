@@ -1,0 +1,107 @@
+[
+  {
+    "id": 1,
+    "konu": "siparis-durumu",
+    "devret": true,
+    "cevap_taslagi": "Merhaba, paylaştığınız sipariş numarası hesabınızla doğrulanamadı. Güvenliğiniz için sipariş bilgilerini bu kanaldan paylaşamıyoruz; talebiniz müşteri temsilcimize aktarıldı.",
+    "not": "Sipariş sahipliği doğrulanamadı (sipariş bu müşteriye ait değil); sipariş detayı paylaşılmadı, temsilci kimlik doğrulaması yapmalı."
+  },
+  {
+    "id": 2,
+    "konu": "siparis-durumu",
+    "devret": false,
+    "cevap_taslagi": "Merhaba, 5 numaralı siparişinizde şu ürünler yer alıyor: Samsung Galaxy Tab White (x4), Soft Drinks (x4), Powder Canister (x4). Sipariş toplam tutarı: 1467.88. Kargo ve teslimat durumuyla ilgili ekibimiz size ayrıca bilgi verecektir.",
+    "not": "Sahiplik doğrulandı. Kargo/teslimat bilgisi API'de yok; cevapta uydurulmadı."
+  },
+  {
+    "id": 3,
+    "konu": "siparis-durumu",
+    "devret": false,
+    "cevap_taslagi": "Merhaba, 9999 numaralı bir siparişi sistemimizde bulamadık. Sipariş numaranızı kontrol edip tekrar paylaşabilir misiniz?",
+    "not": "9999 numaralı sipariş sistemde bulunamadı."
+  },
+  {
+    "id": 4,
+    "konu": "istenmeyen-etki",
+    "devret": true,
+    "cevap_taslagi": "Merhaba, yaşadığınız durum için çok üzgünüz. Talebiniz yetkili müşteri temsilcimize öncelikli olarak aktarıldı; en kısa sürede sizinle iletişime geçilecektir.",
+    "not": "Hassas konu (istenmeyen-etki); otomatik cevapta teşhis, tedavi veya ürün önerisi verilmedi, temsilci ilgilenmeli."
+  },
+  {
+    "id": 5,
+    "konu": "iade-sikayet",
+    "devret": true,
+    "cevap_taslagi": "Merhaba, yaşadığınız sorun için üzgünüz. Talebiniz müşteri temsilcimize aktarıldı; süreçle ilgili en kısa sürede size dönüş yapılacaktır.",
+    "not": "Hassas konu (iade-sikayet); otomatik cevapta teşhis, tedavi veya ürün önerisi verilmedi, temsilci ilgilenmeli."
+  },
+  {
+    "id": 6,
+    "konu": "siparis-durumu",
+    "devret": false,
+    "cevap_taslagi": "Hello, your order #3 contains: Fish Steak (x1), iPhone 13 Pro (x1), Realme X (x1), Man Short Sleeve Shirt (x5), Dior J'adore (x2), Party Glasses (x5). Order total: 1794.85. Our team will get back to you separately about shipping and delivery status.",
+    "not": "Sahiplik doğrulandı. Kargo/teslimat bilgisi API'de yok; cevapta uydurulmadı."
+  },
+  {
+    "id": 7,
+    "konu": "diger",
+    "devret": false,
+    "cevap_taslagi": "",
+    "not": "Spam / istenmeyen tanıtım mesajı; cevap üretilmedi, mesajdaki bağlantı açılmamalı."
+  },
+  {
+    "id": 8,
+    "konu": "siparis-durumu",
+    "devret": false,
+    "cevap_taslagi": "Merhaba, 4 numaralı siparişinizde şu ürünler yer alıyor: Sports Sneakers Off White Red (x3), Dior J'adore (x4). Sipariş toplam tutarı: 689.93. Kargo ve teslimat durumuyla ilgili ekibimiz size ayrıca bilgi verecektir. Fiyat sorunuzla ilgili ekibimiz ayrıca bilgi verecektir.",
+    "not": "Sahiplik doğrulandı. Kargo/teslimat bilgisi API'de yok; cevapta uydurulmadı. İkincil niyet: fiyat."
+  },
+  {
+    "id": 9,
+    "konu": "urun-sorusu",
+    "devret": false,
+    "cevap_taslagi": "Merhaba, sorunuz için teşekkürler. Ürünle ilgili bilgiyi doğrulanmış kaynaktan teyit ederek ekibimiz size en kısa sürede dönüş yapacaktır.",
+    "not": "Ürün sorusu; doğrulanmış ürün bilgisi kaynağı entegre değil, içerik/uygunluk bilgisi uydurulmadı — temsilci teyit etmeli."
+  },
+  {
+    "id": 10,
+    "konu": "fiyat",
+    "devret": false,
+    "cevap_taslagi": "Merhaba, güncel fiyat ve kampanya bilgilerini ekibimiz teyit ederek size en kısa sürede iletecektir.",
+    "not": "Fiyat sorusu; doğrulanmış fiyat kaynağı entegre değil, fiyat uydurulmadı — temsilci teyit etmeli."
+  },
+  {
+    "id": 11,
+    "konu": "urun-sorusu",
+    "devret": false,
+    "cevap_taslagi": "Merhaba, sorunuz için teşekkürler. Ürünle ilgili bilgiyi doğrulanmış kaynaktan teyit ederek ekibimiz size en kısa sürede dönüş yapacaktır.",
+    "not": "Ürün sorusu; doğrulanmış ürün bilgisi kaynağı entegre değil, içerik/uygunluk bilgisi uydurulmadı — temsilci teyit etmeli."
+  },
+  {
+    "id": 12,
+    "konu": "diger",
+    "devret": false,
+    "cevap_taslagi": "Merhaba, sorunuz için teşekkürler. Ekibimiz size en kısa sürede bilgi verecektir.",
+    "not": "Genel soru; belirli bir sipariş numarası yok, sipariş API'si sorgulanmadı. Bilgi veri kaynağında yok, temsilci yanıtlamalı."
+  },
+  {
+    "id": 13,
+    "konu": "urun-sorusu",
+    "devret": false,
+    "cevap_taslagi": "Merhaba, sorunuz için teşekkürler. Ürünle ilgili bilgiyi doğrulanmış kaynaktan teyit ederek ekibimiz size en kısa sürede dönüş yapacaktır.",
+    "not": "Ürün sorusu; doğrulanmış ürün bilgisi kaynağı entegre değil, içerik/uygunluk bilgisi uydurulmadı — temsilci teyit etmeli."
+  },
+  {
+    "id": 14,
+    "konu": "fiyat",
+    "devret": false,
+    "cevap_taslagi": "Merhaba, güncel fiyat ve kampanya bilgilerini ekibimiz teyit ederek size en kısa sürede iletecektir.",
+    "not": "Fiyat sorusu; doğrulanmış fiyat kaynağı entegre değil, fiyat uydurulmadı — temsilci teyit etmeli."
+  },
+  {
+    "id": 15,
+    "konu": "urun-sorusu",
+    "devret": false,
+    "cevap_taslagi": "Merhaba, sorunuz için teşekkürler. Ürünle ilgili bilgiyi doğrulanmış kaynaktan teyit ederek ekibimiz size en kısa sürede dönüş yapacaktır.",
+    "not": "Ürün sorusu; doğrulanmış ürün bilgisi kaynağı entegre değil, içerik/uygunluk bilgisi uydurulmadı — temsilci teyit etmeli."
+  }
+]

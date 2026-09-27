@@ -34,17 +34,24 @@
 - API ön kontrolü (yalnızca okuma): cart 12 → userId 12 (mesaj 1'de musteri_id 7 → **uyuşmuyor**), cart 5/3/4 → eşleşiyor, cart 9999 → HTTP 404 "not found".
 - Not: Python `urllib` varsayılan User-Agent ile DummyJSON JSON olmayan hata döndürdü; açık `User-Agent` başlığı gerekli.
 
+- Bölüm A teknoloji kararı: Node.js 18+, harici npm bağımlılığı yok, yerleşik `fetch`, testler `node:test` + `node:assert`, runtime LLM/AI API yok; konu ataması, güvenlik ve sahiplik doğrulaması deterministik.
+- `case-brief.md` teslim artefaktı değil: Git takibinden ve geçmişinden çıkarıldı, `.git/info/exclude` ile yerelde hariç tutuluyor (dosya yerelde duruyor).
+- **Bölüm A zorunlu kısmı tamamlandı:** `kurallar.js`, `isle.js`, `test.js`, `dogrula.js`, `talepler.json`, `ozet.html`.
+  - `test.js`: 37/37 geçti. `dogrula.js`: tüm kontroller geçti.
+  - Canlı sonuç: devredilen 3 (id 1, 4, 5); dağılım urun-sorusu 4 · fiyat 2 · siparis-durumu 5 · iade-sikayet 1 · istenmeyen-etki 1 · diger 2.
+  - Mesaj 1 (cart 12, sahibi başka müşteri) → sipariş verisi sızmadı, devredildi.
+
 ## Henüz yapılmayanlar
 
-- Bölüm A kodu, `talepler.json`, özet sayfası, testler.
 - Bölüm B `workflow.json`, `akis-aciklama.md`, şablon seçimi.
-- README'nin doldurulması, bitiş saati.
+- `promptlar/B-n8n.md` doldurulması.
+- README Bölüm B + bitiş saati.
 - GitHub remote + push (kullanıcı onayı bekleniyor).
 
 ## Git durumu
 
 - Branch: `main`, remote yok, push yapılmadı.
-- Commit: `chore: proje iskeletini ve teslim yapısını hazırla`.
+- Commitler: `chore: proje iskeletini ve teslim yapısını hazırla` (case-brief.md çıkarılarak amend edildi), `feat: müşteri mesajı otomasyonunu tamamla`.
 
 ## Zorunlular bittikten sonra değerlendirilecek
 

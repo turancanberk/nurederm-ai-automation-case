@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Talep Özeti</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 640px; margin: 2rem auto; padding: 0 1rem; color: #222; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #ccc; padding: .4rem .6rem; text-align: left; }
+    td:last-child { text-align: right; }
+    .kutu { display: inline-block; margin: 0 1rem 1rem 0; padding: .6rem 1rem; border: 1px solid #ccc; border-radius: 6px; }
+  </style>
+</head>
+<body>
+  <h1>Müşteri Mesajları — Talep Özeti</h1>
+  <div class="kutu">Toplam mesaj: <strong>15</strong></div>
+  <div class="kutu">Temsilciye devredilen: <strong>3</strong></div>
+  <h2>Konu bazında</h2>
+  <table>
+    <thead><tr><th>Konu</th><th>Mesaj sayısı</th></tr></thead>
+    <tbody>
+      <tr><td>urun-sorusu</td><td>4</td></tr>
+      <tr><td>fiyat</td><td>2</td></tr>
+      <tr><td>siparis-durumu</td><td>5</td></tr>
+      <tr><td>iade-sikayet</td><td>1</td></tr>
+      <tr><td>istenmeyen-etki</td><td>1</td></tr>
+      <tr><td>diger</td><td>2</td></tr>
+    </tbody>
+  </table>
+  <p>Devredilen mesaj id'leri: 1, 4, 5</p>
+</body>
+</html>
