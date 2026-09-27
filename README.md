@@ -87,7 +87,7 @@ node A-mesaj-otomasyonu/dogrula.js
 
 | id | konu | devret | sonuç |
 |---|---|---|---|
-| 1 | siparis-durumu | true | cart 12 başka müşteriye ait → bilgi verilmedi |
+| 1 | siparis-durumu | true | cart 12 sahiplik doğrulaması başarısız → bilgi verilmedi |
 | 2 | siparis-durumu | false | cart 5 eşleşti → ürünler + toplam 1467.88 |
 | 3 | siparis-durumu | false | 9999 bulunamadı → müşteriden no kontrolü istendi |
 | 4 | istenmeyen-etki | true | tıbbi öneri yok, temsilciye |
