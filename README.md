@@ -48,7 +48,11 @@ Node.js (harici npm paketi yok, runtime'da LLM/AI API yok). Tüm kararlar determ
 
 ## Bölüm B
 
-_(Henüz başlanmadı.)_
+**Aşama: Bölüm B teknik doğrulama ve template import aşaması** (final `workflow.json` henüz üretilmedi).
+
+- Başlangıç şablonu: [Competitor price monitoring with web scraping,Google Sheets & Telegram (#4640)](https://n8n.io/workflows/4640-competitor-price-monitoring-with-web-scrapinggoogle-sheets-and-telegram/) — local n8n 2.35.7'ye import edildi.
+- Kaynak site canlı doğrulandı: 20 sayfa, 117 laptop; HTTP Request pagination ile tüm sayfaların tek execution'da çekildiği geçici bir test workflow'u ile doğrulandı.
+- Storage: n8n Data Table (`laptop_price_snapshots`). Ayrıntılar: [B-n8n/akis-aciklama.md](B-n8n/akis-aciklama.md).
 
 ## Nasıl çalıştırılır
 

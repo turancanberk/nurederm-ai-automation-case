@@ -44,10 +44,16 @@
   - Canlı sonuç: devredilen 3 (id 1, 4, 5); dağılım urun-sorusu 4 · fiyat 2 · siparis-durumu 5 · iade-sikayet 1 · istenmeyen-etki 1 · diger 2.
   - Mesaj 1 (cart 12, sahibi başka müşteri) → sipariş verisi sızmadı, devredildi.
 
+- **Bölüm B teknik doğrulama ve template import aşaması tamamlandı:**
+  - Template #4640 resmi API'den doğrulandı ve local n8n 2.35.7'ye import edildi (workflow id `QAneGL7LmmVuAy1G`; template'ten gelen `video/production/final` etiketleri final aşamada temizlenecek).
+  - Site: 20 sayfa / 117 ürün; ad `a.title[title]`, fiyat `span[itemprop=price]`, yorum `span[itemprop=reviewCount]`, link `a.title[href]`; `product_key` = mutlak link (adlar benzersiz değil).
+  - HTTP Request pagination (`page={{ $pageCount + 1 }}`, bitiş: `rel="next"` yok) geçici test workflow'unda 20 sayfa / 117 kart döndürdü; test workflow'u arşivlendi.
+  - Taslak: `B-n8n/akis-aciklama.md`.
+
 ## Henüz yapılmayanlar
 
-- Bölüm B `workflow.json`, `akis-aciklama.md`, şablon seçimi.
-- `promptlar/B-n8n.md` doldurulması.
+- Bölüm B final `workflow.json` (onay bekleniyor), `akis-aciklama.md`'nin final hali.
+- `laptop_price_snapshots` Data Table'ının oluşturulması.
 - README Bölüm B + bitiş saati.
 - GitHub remote + push (kullanıcı onayı bekleniyor).
 
