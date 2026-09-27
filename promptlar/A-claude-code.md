@@ -731,3 +731,201 @@ raporla.
 
 Henüz /products/search veya Bölüm B'ye geçme.
 ````
+
+---
+
+## 06
+
+````text
+Bölüm A'nın zorunlu kısmı, güvenlik kontrolleri ve operasyon özeti tamamlandı.
+
+Şimdi yalnızca brief'teki isteğe bağlı `/products/search` bonusunu kontrollü şekilde ekle.
+Bu bonus bittikten sonra Bölüm A'yı kapatacağız.
+
+Bu promptu promptlar/A-claude-code.md dosyasına 06 numarayla ve değiştirmeden ekle.
+
+Henüz Bölüm B'ye geçme.
+
+## Amaç
+
+`urun-sorusu` ve `fiyat` mesajlarında, mesajda belirli bir ürün aranabiliyorsa:
+
+GET https://dummyjson.com/products/search?q=...
+
+endpoint'ini kullan.
+
+Ancak DummyJSON genel mağaza API'si olduğu için sonuçların kozmetik sorusuyla gerçekten ilgili olmayabileceğini unutma.
+
+YANLIŞ veya ilgisiz ürün bilgisini cevap taslağına eklemektense hiçbir sonuç kullanmamak tercih edilir.
+
+## 1. Hangi mesajlarda arama yap
+
+Yalnız:
+- urun-sorusu
+- fiyat
+
+konularında değerlendir.
+
+Belirli bir ürün sorgusu çıkarılamıyorsa API çağrısı yapma.
+
+Örneğin:
+- "Retinol serumunuz var mı?" -> ürün sorgusu çıkarılabilir
+- "Nemlendirici krem ne kadar?" -> ürün sorgusu çıkarılabilir
+- "C vitamini serumu..." -> ürün sorgusu çıkarılabilir
+- "Tonik 200 ml mi?" -> ürün sorgusu çıkarılabilir
+- "İndirim kodunuz var mı, fiyat listesi paylaşır mısınız?" -> belirli ürün yok, arama yapma
+- "ürünleriniz hayvanlar üzerinde test ediliyor mu?" -> belirli ürün yok, arama yapma
+
+Mesaj 8'de sipariş-durumu birincil konu olduğu için bu bonus kapsamında ayrıca ürün araması yapma.
+
+## 2. Güvenli sorgu
+
+Mesajın tamamını körlemesine query olarak gönderme.
+
+Kısa ürün sorgusu üret.
+
+Türkçe ürün terimleri için gerekirse çok küçük ve açık bir mapping kullanılabilir:
+- nemlendirici -> moisturizer
+- tonik -> toner
+- güneş kremi -> sunscreen
+- c vitamini -> vitamin c
+- retinol -> retinol
+
+Bunu gereksiz büyütme.
+
+Query URL'sini güvenli biçimde encode et.
+
+## 3. Sonuç doğrulama
+
+API'den sonuç geldi diye otomatik olarak kullanma.
+
+Bir sonucun cevapta kullanılabilmesi için ürün başlığının sorguyla makul şekilde ilişkili olduğunu deterministik olarak doğrula.
+
+Basit token/anahtar kelime eşleşmesi yeterli.
+
+İlgisiz ürünleri ASLA cevaba ekleme.
+
+Sonuç yoksa veya sonuçlar ilgisizse mevcut güvenli fallback cevabı aynen kullan:
+"bilgiyi doğrulanmış kaynaktan teyit ederek ekibimiz dönüş yapacaktır" yaklaşımı.
+
+## 4. Cevap davranışı
+
+Fiyat mesajında gerçekten ilgili ürün bulunursa:
+- ürün adı
+- API'deki güncel fiyat
+
+kullanılabilir.
+
+urun-sorusu mesajında ilgili ürün bulunursa:
+- ürünün API'de bulunduğunu / ürün adını söyleyebilirsin
+- ancak API'nin desteklemediği:
+  - cilt uygunluğu
+  - kullanım tavsiyesi
+  - içerik
+  - alkol bilgisi
+  - hayvan testi bilgisi
+  - medikal tavsiye
+
+uydurulmayacak.
+
+Örneğin "Retinol ürününü buldum" demek mümkün olabilir;
+"Kuru cilt için uygundur" deme.
+
+## 5. Hata davranışı
+
+/products/search bonus API çağrısı:
+- ağ hatası
+- timeout
+- 5xx
+- bozuk JSON
+- beklenmeyen yapı
+
+üretirse ana mesaj işleme başarısız olmasın.
+
+Bu bonus olduğu için:
+- mevcut güvenli fallback cevabını kullan
+- sırf ürün arama servisi hata verdi diye devret=true yapma
+- teknik hata detayını müşteriye veya talepler.json'a yazma
+
+## 6. talepler.json
+
+Brief'in formatı değişmeyecek.
+
+Her kayıt yine yalnızca:
+
+id
+konu
+devret
+cevap_taslagi
+not
+
+alanlarını içersin.
+
+## 7. Testler
+
+Mevcut 43 testi bozma.
+
+Sahte fetch ile en az şunları ekle:
+
+- ilgili ürün sonucu -> fiyat mesajında ürün adı + fiyat kullanılabilir
+- ilgisiz search sonucu -> kullanılmaz, fallback
+- 0 sonuç -> fallback
+- search API 500 -> fallback
+- bozuk JSON -> fallback
+- belirli ürün olmayan fiyat mesajında search çağrılmaz
+- hayvan testi sorusunda search çağrılmaz
+- sipariş mesajı 8 için search çağrılmaz
+- API sonucu olsa bile cilt uygunluğu / içerik / hayvan testi gibi bilgi uydurulmaz
+
+Sonra:
+
+node A-mesaj-otomasyonu/test.js
+node A-mesaj-otomasyonu/isle.js
+node A-mesaj-otomasyonu/dogrula.js
+
+çalıştır.
+
+Canlı API run'ında hangi mesajlarda search çağrıldığını ve gerçekten ilgili sonuç kullanılıp kullanılmadığını raporla.
+
+DummyJSON'da kozmetik sonucu çıkmaması veya sonuçların ilgisiz olup elenmesi BAŞARISIZLIK değildir.
+Brief açısından API'nin doğru ve güvenli kullanılması yeterlidir.
+
+## 8. Dokümantasyon
+
+README'de kısa biçimde:
+- `/products/search` bonusunun uygulandığını
+- yalnız ilgili sonuçların kullanıldığını
+- ilgisiz/boş sonuçta fallback yapıldığını
+
+belirt.
+
+HANDOFF'u güncelle.
+
+## 9. Git
+
+Testler geçtikten sonra diff/status kontrolü yap.
+
+Commit mesajı:
+
+feat: ürün arama bonusunu güvenli şekilde ekle
+
+Remote ekleme.
+Push yapma.
+
+## Sonunda raporla ve dur
+
+Bana:
+
+1. hangi actual mesajlarda search çağrıldığını
+2. kullanılan query'leri
+3. API'nin hangi sonuçlarını ilgili kabul ettiğini
+4. hangi mesajların fallback'te kaldığını
+5. yeni toplam test sayısını
+6. talepler.json formatının değişmediğini
+7. commit hash'ini
+8. git status'u
+
+raporla.
+
+Bölüm B'ye henüz başlama.
+````

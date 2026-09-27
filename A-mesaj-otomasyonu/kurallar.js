@@ -152,39 +152,93 @@ function cartYapisiGecerliMi(cart, istenenId) {
 
 // Dönüş: { durum: 'ok', cart } | { durum: 'bulunamadi' } | { durum: 'hata', neden }
 // `neden` yalnızca kategori içerir (ag / timeout / http / json / yapi); ham gövde asla dönmez.
-async function siparisGetir(id, { fetchImpl = globalThis.fetch, timeoutMs = VARSAYILAN_TIMEOUT_MS } = {}) {
+// Timeout'lu güvenli GET. Dönüş: { govde } | { hata, status? } — hata yalnızca kategori
+// (ag / timeout / http / json) içerir; ham gövde veya hata mesajı dönmez.
+async function jsonGetir(url, { fetchImpl = globalThis.fetch, timeoutMs = VARSAYILAN_TIMEOUT_MS } = {}) {
   // AbortSignal.timeout() zamanlayıcısı unref'tir; açık bir setTimeout ile timeout her koşulda tetiklenir.
   const kontrol = new AbortController();
   const zamanlayici = setTimeout(() => kontrol.abort(), timeoutMs);
-  let yanit;
-  let govde;
   try {
+    let yanit;
     try {
-      yanit = await fetchImpl(CART_URL + encodeURIComponent(id), {
+      yanit = await fetchImpl(url, {
         headers: { Accept: 'application/json', 'User-Agent': 'nurederm-case-mesaj-otomasyonu/1.0' },
         signal: kontrol.signal,
       });
     } catch {
-      return { durum: 'hata', neden: kontrol.signal.aborted ? 'timeout' : 'ag' };
+      return { hata: kontrol.signal.aborted ? 'timeout' : 'ag' };
     }
-
-    if (yanit.status === 404) return { durum: 'bulunamadi' };
-    if (!yanit.ok) return { durum: 'hata', neden: 'http' };
-
+    if (!yanit.ok) return { hata: 'http', status: yanit.status };
     try {
-      govde = JSON.parse(await yanit.text());
+      return { govde: JSON.parse(await yanit.text()) };
     } catch {
-      return { durum: 'hata', neden: kontrol.signal.aborted ? 'timeout' : 'json' };
+      return { hata: kontrol.signal.aborted ? 'timeout' : 'json' };
     }
   } finally {
     clearTimeout(zamanlayici);
   }
+}
+
+async function siparisGetir(id, secenekler = {}) {
+  const yanit = await jsonGetir(CART_URL + encodeURIComponent(id), secenekler);
+  if (yanit.status === 404) return { durum: 'bulunamadi' };
+  if (yanit.hata) return { durum: 'hata', neden: yanit.hata };
+  const govde = yanit.govde;
 
   if (govde && typeof govde.message === 'string' && /not found/i.test(govde.message) && govde.products === undefined) {
     return { durum: 'bulunamadi' };
   }
   if (!cartYapisiGecerliMi(govde, id)) return { durum: 'hata', neden: 'yapi' };
   return { durum: 'ok', cart: govde };
+}
+
+// ---------------------------------------------------------------------------
+// Ürün arama (bonus) — /products/search
+// ---------------------------------------------------------------------------
+
+const ARAMA_URL = 'https://dummyjson.com/products/search?q=';
+const EN_FAZLA_URUN = 3;
+// Küçük ve açık Türkçe -> İngilizce ürün terimi eşlemesi; ilk eşleşen kullanılır.
+const URUN_TERIMLERI = [
+  [/gunes kremi/, 'sunscreen'],
+  [/\bc vitamini|\bvitamin c\b/, 'vitamin c'],
+  [/retinol/, 'retinol'],
+  [/nemlendirici/, 'moisturizer'],
+  [/\btonik/, 'toner'],
+];
+// Genel mağaza API'sinde yalnızca kozmetikle ilgili kategoriler kabul edilir.
+const KOZMETIK_KATEGORILER = new Set(['beauty', 'skin-care', 'fragrances']);
+
+// Mesajdan kısa ürün sorgusu çıkarır; belirli bir ürün terimi yoksa null (API çağrılmaz).
+function urunSorgusuCikar(metin) {
+  const n = normalize(metin);
+  const eslesme = URUN_TERIMLERI.find(([kalip]) => kalip.test(n));
+  return eslesme ? eslesme[1] : null;
+}
+
+const kelimeler = (metin) => metin.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+
+// Deterministik ilgililik: sorgunun her kelimesi başlıkta tam kelime (veya basit çoğul) olarak geçmeli
+// ve ürün kozmetik kategorisinde olmalı. Ör. "cream" araması "Ice Cream [groceries]" döndürse de elenir.
+function urunIlgiliMi(urun, sorgu) {
+  if (!KOZMETIK_KATEGORILER.has(urun.category)) return false;
+  const baslik = new Set(kelimeler(urun.title));
+  return kelimeler(sorgu).every((k) => baslik.has(k) || baslik.has(`${k}s`) || baslik.has(`${k}es`));
+}
+
+// Dönüş: { durum: 'ok', urunler: [{ title, price }] } (yalnızca ilgili olanlar) | { durum: 'hata' }
+async function urunAra(sorgu, secenekler = {}) {
+  const yanit = await jsonGetir(ARAMA_URL + encodeURIComponent(sorgu), secenekler);
+  if (yanit.hata) return { durum: 'hata' };
+  const govde = yanit.govde;
+  if (!govde || typeof govde !== 'object' || !Array.isArray(govde.products)) return { durum: 'hata' };
+  const urunler = govde.products
+    .filter((p) => p && typeof p.title === 'string' && p.title.trim() !== '' &&
+      typeof p.price === 'number' && Number.isFinite(p.price) && p.price >= 0)
+    .filter((p) => urunIlgiliMi(p, sorgu))
+    .slice(0, EN_FAZLA_URUN)
+    .map((p) => ({ title: p.title.trim(), price: p.price }));
+  return { durum: 'ok', urunler };
 }
 
 // ---------------------------------------------------------------------------
@@ -321,6 +375,43 @@ function digerKonuCevabi(analiz) {
   }
 }
 
+// Bonus: fiyat / urun-sorusu mesajlarında belirli bir ürün terimi varsa /products/search ile ara.
+// Yalnızca ilgili sonuçlar kullanılır; sonuç yok / ilgisiz / arama hatası -> mevcut fallback cevabı aynen.
+// Arama hatası bonus olduğu için devret'i değiştirmez; teknik detay çıktıya yazılmaz.
+async function urunAramasiylaCevapla(mesaj, analiz, secenekler) {
+  const fallback = digerKonuCevabi(analiz);
+  if (analiz.konu !== 'fiyat' && analiz.konu !== 'urun-sorusu') return fallback;
+  const sorgu = urunSorgusuCikar(mesaj.mesaj);
+  if (!sorgu) return fallback;
+
+  let arama;
+  try {
+    arama = await urunAra(sorgu, secenekler);
+  } catch {
+    arama = { durum: 'hata' };
+  }
+  if (arama.durum !== 'ok') {
+    return { ...fallback, not: `${fallback.not} Ürün araması (sorgu: "${sorgu}") şu anda yapılamadı; fallback cevap kullanıldı.` };
+  }
+  if (arama.urunler.length === 0) {
+    return { ...fallback, not: `${fallback.not} Ürün araması (sorgu: "${sorgu}") ilgili sonuç döndürmedi; fallback cevap kullanıldı.` };
+  }
+
+  const notEk = ikincilNot(analiz.ikincil);
+  const adet = arama.urunler.length;
+  if (analiz.konu === 'fiyat') {
+    const liste = arama.urunler.map((u) => `${u.title}: ${tutarFormatla(u.price)}`).join('; ');
+    return { ...fallback,
+      cevap_taslagi: `Merhaba, sorduğunuz ürünle ilgili mağaza sistemimizdeki güncel liste fiyatı: ${liste}. ` +
+        'Kampanya ve kesin fiyat bilgisini ekibimiz teyit ederek size iletecektir.',
+      not: `Fiyat sorusu; ürün araması (sorgu: "${sorgu}") ile ${adet} ilgili ürün bulundu, fiyat API'den alındı (para birimi API'de belirtilmiyor) — temsilci teyit etmeli.${notEk}` };
+  }
+  return { ...fallback,
+    cevap_taslagi: `Merhaba, sorunuz için teşekkürler. Mağazamızda ilgili ürün olarak şunlar bulunuyor: ${arama.urunler.map((u) => u.title).join(', ')}. ` +
+      'Sorunuzun yanıtını doğrulanmış kaynaktan teyit ederek ekibimiz size en kısa sürede dönüş yapacaktır.',
+    not: `Ürün sorusu; ürün araması (sorgu: "${sorgu}") ile ${adet} ilgili ürün bulundu. İçerik/uygunluk/kullanım bilgisi API'de yok, uydurulmadı — temsilci teyit etmeli.${notEk}` };
+}
+
 // Çıktı kaydı her zaman yalnızca bu 5 alanı içerir.
 function kayit(id, konu, { devret, cevap_taslagi, not }) {
   return { id, konu, devret: devret === true, cevap_taslagi, not };
@@ -344,7 +435,7 @@ async function mesajiIsleDetayli(mesaj, secenekler = {}) {
   } else if (analiz.konu === 'siparis-durumu') {
     sonuc = await siparisMesajiIsle(mesaj, analiz, secenekler);
   } else {
-    sonuc = digerKonuCevabi(analiz);
+    sonuc = await urunAramasiylaCevapla(mesaj, analiz, secenekler);
   }
   return { talep: kayit(mesaj.id, analiz.konu, sonuc), durum: sonuc.durum };
 }
@@ -593,6 +684,6 @@ ${devirSatirlari}
 module.exports = {
   KONULAR, HASSAS_KONULAR, ONCELIK,
   normalize, siparisNumaralariCikar, konuBelirle, kimlikParse,
-  siparisGetir, mesajiIsle, mesajiIsleDetayli, tumunuIsle, tumunuIsleDetayli,
+  siparisGetir, urunSorgusuCikar, urunIlgiliMi, urunAra, mesajiIsle, mesajiIsleDetayli, tumunuIsle, tumunuIsleDetayli,
   ozetHesapla, ozetHtml, escapeHtml,
 };

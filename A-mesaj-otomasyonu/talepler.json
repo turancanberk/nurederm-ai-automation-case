@@ -60,21 +60,21 @@
     "konu": "urun-sorusu",
     "devret": false,
     "cevap_taslagi": "Merhaba, sorunuz için teşekkürler. Ürünle ilgili bilgiyi doğrulanmış kaynaktan teyit ederek ekibimiz size en kısa sürede dönüş yapacaktır.",
-    "not": "Ürün sorusu; doğrulanmış ürün bilgisi kaynağı entegre değil, içerik/uygunluk bilgisi uydurulmadı — temsilci teyit etmeli."
+    "not": "Ürün sorusu; doğrulanmış ürün bilgisi kaynağı entegre değil, içerik/uygunluk bilgisi uydurulmadı — temsilci teyit etmeli. Ürün araması (sorgu: \"retinol\") ilgili sonuç döndürmedi; fallback cevap kullanıldı."
   },
   {
     "id": 10,
     "konu": "fiyat",
     "devret": false,
     "cevap_taslagi": "Merhaba, güncel fiyat ve kampanya bilgilerini ekibimiz teyit ederek size en kısa sürede iletecektir.",
-    "not": "Fiyat sorusu; doğrulanmış fiyat kaynağı entegre değil, fiyat uydurulmadı — temsilci teyit etmeli."
+    "not": "Fiyat sorusu; doğrulanmış fiyat kaynağı entegre değil, fiyat uydurulmadı — temsilci teyit etmeli. Ürün araması (sorgu: \"moisturizer\") ilgili sonuç döndürmedi; fallback cevap kullanıldı."
   },
   {
     "id": 11,
     "konu": "urun-sorusu",
     "devret": false,
     "cevap_taslagi": "Merhaba, sorunuz için teşekkürler. Ürünle ilgili bilgiyi doğrulanmış kaynaktan teyit ederek ekibimiz size en kısa sürede dönüş yapacaktır.",
-    "not": "Ürün sorusu; doğrulanmış ürün bilgisi kaynağı entegre değil, içerik/uygunluk bilgisi uydurulmadı — temsilci teyit etmeli."
+    "not": "Ürün sorusu; doğrulanmış ürün bilgisi kaynağı entegre değil, içerik/uygunluk bilgisi uydurulmadı — temsilci teyit etmeli. Ürün araması (sorgu: \"vitamin c\") ilgili sonuç döndürmedi; fallback cevap kullanıldı."
   },
   {
     "id": 12,
@@ -88,7 +88,7 @@
     "konu": "urun-sorusu",
     "devret": false,
     "cevap_taslagi": "Merhaba, sorunuz için teşekkürler. Ürünle ilgili bilgiyi doğrulanmış kaynaktan teyit ederek ekibimiz size en kısa sürede dönüş yapacaktır.",
-    "not": "Ürün sorusu; doğrulanmış ürün bilgisi kaynağı entegre değil, içerik/uygunluk bilgisi uydurulmadı — temsilci teyit etmeli."
+    "not": "Ürün sorusu; doğrulanmış ürün bilgisi kaynağı entegre değil, içerik/uygunluk bilgisi uydurulmadı — temsilci teyit etmeli. Ürün araması (sorgu: \"toner\") ilgili sonuç döndürmedi; fallback cevap kullanıldı."
   },
   {
     "id": 14,

@@ -10,7 +10,7 @@
   - Eşleşiyorsa → ürün adları + toplam tutar içeren cevap taslağı.
   - Not found → düzgün hata/uyarı mesajı.
 - Çıktılar: `talepler.json` (her mesaj için `{ id, konu, devret, cevap_taslagi, not }`) + konu bazında sayılar ve devir sayısını gösteren tek sayfalık özet (HTML veya terminal).
-- Bonus (zorunlu değil): `/products/search?q=...`.
+- Bonus (zorunlu değil): `/products/search?q=...` — uygulandı.
 
 ### Bölüm B (zorunlu, `workflow.json` içinde görünür olmalı)
 1. Günde 1 kez çalışan Schedule/Cron tetikleyici.
@@ -37,7 +37,8 @@
 - Bölüm A teknoloji kararı: Node.js 18+, harici npm bağımlılığı yok, yerleşik `fetch`, testler `node:test` + `node:assert`, runtime LLM/AI API yok; konu ataması, güvenlik ve sahiplik doğrulaması deterministik.
 - `case-brief.md` teslim artefaktı değil: Git takibinden ve geçmişinden çıkarıldı, `.git/info/exclude` ile yerelde hariç tutuluyor (dosya yerelde duruyor).
 - **Bölüm A zorunlu kısmı tamamlandı:** `kurallar.js`, `isle.js`, `test.js`, `dogrula.js`, `talepler.json`, `ozet.html`.
-  - `test.js`: 43/43 geçti. `dogrula.js`: tüm kontroller geçti (özet HTML kontrolleri dahil).
+  - `test.js`: 59/59 geçti. `dogrula.js`: tüm kontroller geçti (özet HTML kontrolleri dahil).
+  - `/products/search` bonusu: yalnız belirli ürün terimi olan fiyat/ürün mesajlarında; ilgililik (başlık kelimeleri + kozmetik kategori) doğrulanmadan sonuç kullanılmaz. Canlıda 9, 10, 11, 13 için arandı, 0 sonuç → fallback.
   - Sahiplik eşleşmeyen siparişte `not` nötr (başka müşteriye ait olduğu ifşa edilmiyor).
   - `ozet.html` operasyon özeti: KPI kartları, konu/kanal dağılımı, devir nedenleri, temsilci kuyruğu (WhatsApp 8 · Instagram 7; sahiplik doğrulanamadı 1 · bulunamayan 1 · spam 1).
   - Canlı sonuç: devredilen 3 (id 1, 4, 5); dağılım urun-sorusu 4 · fiyat 2 · siparis-durumu 5 · iade-sikayet 1 · istenmeyen-etki 1 · diger 2.
@@ -53,12 +54,12 @@
 ## Git durumu
 
 - Branch: `main`, remote yok, push yapılmadı.
-- Commitler: `chore: proje iskeletini ve teslim yapısını hazırla` (case-brief.md çıkarılarak amend edildi), `feat: müşteri mesajı otomasyonunu tamamla`, `fix: sipariş sahipliği notunu güvenli hale getir`, `feat: talep özetini operasyon metrikleriyle geliştir`.
+- Commitler: `chore: proje iskeletini ve teslim yapısını hazırla` (case-brief.md çıkarılarak amend edildi), `feat: müşteri mesajı otomasyonunu tamamla`, `fix: sipariş sahipliği notunu güvenli hale getir`, `feat: talep özetini operasyon metrikleriyle geliştir`, `feat: ürün arama bonusunu güvenli şekilde ekle`. Bölüm A kapandı; sıradaki: Bölüm B.
 
 ## Zorunlular bittikten sonra değerlendirilecek
 
 - ~~A özetinde kanal dağılımı, devir nedenleri, başarısız müşteri doğrulama sayısı, bulunamayan sipariş sayısı, spam sayısı.~~ (yapıldı)
-- `/products/search` bonusu.
+- ~~`/products/search` bonusu.~~ (yapıldı)
 - n8n first-run/baseline notification suppression.
 - REMOVED ürün tespiti.
 - Normal başarılı run ve PRICE_CHANGED run ekran görüntüleri.

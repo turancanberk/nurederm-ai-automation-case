@@ -33,7 +33,9 @@ Node.js (harici npm paketi yok, runtime'da LLM/AI API yok). Tüm kararlar determ
 - **Hassas konular** (`iade-sikayet`, `istenmeyen-etki`): `devret: true`, sabit ve güvenli cevap; teşhis, tedavi, ürün önerisi yok. Mesajda sipariş no olsa bile API çağrılmaz.
 - **Sipariş güvenliği:** `userId` ve `musteri_id` pozitif tam sayıya çevrilip karşılaştırılır (`"5"` = `5`; `null`/`"abc"`/`0` geçersiz). Eşleşmezse sipariş verisinin hiçbir parçası çıktıya girmez, `devret: true`. Eşleşirse ürün adları, miktarlar ve toplam yazılır; kargo/teslim bilgisi API'de olmadığı için uydurulmaz.
 - **API hataları:** 404 / "not found" → anlaşılır müşteri mesajı, `devret: false`. Ağ hatası, timeout (8 sn), 5xx, bozuk JSON, beklenmeyen yapı veya yanlış cart id → `devret: true`, teknik detay çıktıya yazılmaz. Tek mesajdaki beklenmeyen hata diğer mesajların işlenmesini durdurmaz.
-- **Fiyat / ürün soruları:** Veri kaynağı olmadığı için fiyat, içerik, cilt uygunluğu vb. bilgi uydurulmaz; temsilci teyidine yönlendirilir. (`/products/search` bonusu henüz eklenmedi.)
+- **Fiyat / ürün soruları:** Fiyat, içerik, cilt uygunluğu vb. bilgi uydurulmaz; temsilci teyidine yönlendirilir.
+- **Bonus — `/products/search` (uygulandı):** Yalnızca `fiyat` / `urun-sorusu` mesajlarında ve mesajda belirli bir ürün terimi varsa çağrılır. Mesajın tamamı gönderilmez; küçük bir eşlemeyle kısa sorgu üretilir (nemlendirici→moisturizer, tonik→toner, güneş kremi→sunscreen, c vitamini→vitamin c, retinol→retinol) ve URL-encode edilir. Sonuçlar ancak başlık sorgunun tüm kelimelerini içeriyor **ve** kategori kozmetikse (beauty / skin-care / fragrances) kullanılır (en fazla 3). Fiyat mesajında ürün adı + API fiyatı yazılır; ürün sorusunda yalnızca ürün adı — içerik, cilt uygunluğu, kullanım, hayvan testi bilgisi yazılmaz. Sonuç yok / ilgisiz / arama hatası (ağ, timeout, 5xx, bozuk JSON, beklenmeyen yapı) → mevcut fallback cevabı aynen kullanılır, `devret` değişmez, teknik detay yazılmaz.
+  - Canlı sonuç: mesaj 9 (`retinol`), 10 (`moisturizer`), 11 (`vitamin c`), 13 (`toner`) için arama yapıldı; DummyJSON dördünde de **0 sonuç** döndü → fallback. Mesaj 14 (belirli ürün yok), 15 (hayvan testi, belirli ürün yok) ve 8 (birincil konu sipariş) için arama yapılmadı. Ön kontrolde `cream` sorgusunun "Ice Cream [groceries]" ve "Red Lipstick" döndürdüğü görüldü; ilgililik filtresi bu tür sonuçları eler.
 - İngilizce mesajlarda sipariş cevabı İngilizce şablonla yazılır.
 
 **Özet sayfası (`ozet.html`)** — JS/harici bağımlılık olmayan, responsive tek HTML:
@@ -68,7 +70,7 @@ node A-mesaj-otomasyonu/dogrula.js
 
 ## Test sonuçları
 
-- `test.js`: **43 test, 43 geçti, 0 başarısız.** 15 mesajın beklenen konusu; `200 ml` / `%100` / URL'nin sipariş no sayılmaması; hassas konuların devri ve tavsiye/teşhis içermemesi; sahiplik eşleşmesi/eşleşmemesi ve sızıntı yokluğu; string/geçersiz `userId`; 404, ağ hatası, HTTP 500/503, bozuk JSON, yanlış cart id, beklenmeyen yapı, timeout; 5 alanlı çıktı şeması; HTML escape; özet metrikleri (toplam 15, kanal toplamı 15, devredilen 3, kuyrukta yalnızca devredilenler, kuyruk/HTML'de API detayı ve mesaj metni yok, HTML bölümleri, girdi kaynaklı değerlerin escape edilmesi).
+- `test.js`: **59 test, 59 geçti, 0 başarısız.** 15 mesajın beklenen konusu; `200 ml` / `%100` / URL'nin sipariş no sayılmaması; hassas konuların devri ve tavsiye/teşhis içermemesi; sahiplik eşleşmesi/eşleşmemesi ve sızıntı yokluğu; string/geçersiz `userId`; 404, ağ hatası, HTTP 500/503, bozuk JSON, yanlış cart id, beklenmeyen yapı, timeout; 5 alanlı çıktı şeması; HTML escape; özet metrikleri (toplam 15, kanal toplamı 15, devredilen 3, kuyrukta yalnızca devredilenler, kuyruk/HTML'de API detayı ve mesaj metni yok, HTML bölümleri, girdi kaynaklı değerlerin escape edilmesi); ürün arama bonusu (sorgu çıkarma, URL encode, ilgili/ilgisiz/0 sonuç, 500 / bozuk JSON / ağ hatası / beklenmeyen yapı / timeout fallback, 14-15-8 numaralı mesajlarda arama yapılmaması, ürün bulunsa da bilgi uydurulmaması, en fazla 3 ürün).
 - `isle.js` canlı çalıştırma (15 mesaj):
 
 | id | konu | devret | sonuç |
@@ -92,7 +94,7 @@ node A-mesaj-otomasyonu/dogrula.js
 ## Bilinen eksikler / takıldığım noktalar
 
 - Sınıflandırma anahtar kelime kurallarına dayanır; verilen 15 mesaj ve testlerdeki varyasyonlar için doğrulandı, ancak farklı yazımlar/argo için kapsam sınırlıdır.
-- Fiyat / ürün soruları için gerçek ürün verisi kullanılmıyor (`/products/search` bonusu henüz yapılmadı).
+- DummyJSON genel bir test mağazası; verilen kozmetik terimleri için canlıda sonuç dönmediğinden ürün arama bonusu gerçek veride fallback'te kalıyor (ilgili sonuç kullanımı sahte fetch testleriyle doğrulandı). Türkçe→İngilizce terim eşlemesi bilerek küçük tutuldu.
 - Node 18 üzerinde ayrıca çalıştırılmadı; yalnızca Node 18'de bulunan yerleşik API'ler kullanıldı (test v22.22.3 ile yapıldı).
 
 ## AI kullanımı

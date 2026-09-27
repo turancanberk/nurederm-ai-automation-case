@@ -430,3 +430,160 @@ test('ek bilgi verilmeden de özet çalışır (geriye uyumluluk)', () => {
   assert.equal(ozet.kuyruk[0].neden, 'Diğer güvenli devir');
   assert.match(K.ozetHtml(ozet), /Temsilciye devredilen: <strong>1<\/strong>/);
 });
+
+// --- 9. Ürün arama bonusu (/products/search) ---------------------------------
+
+const FIYAT_FALLBACK = 'Merhaba, güncel fiyat ve kampanya bilgilerini ekibimiz teyit ederek size en kısa sürede iletecektir.';
+const URUN_FALLBACK = 'Merhaba, sorunuz için teşekkürler. Ürünle ilgili bilgiyi doğrulanmış kaynaktan teyit ederek ekibimiz size en kısa sürede dönüş yapacaktır.';
+const ARAMA = 'https://dummyjson.com/products/search?q=';
+
+// Arama isteklerine `aramaYaniti` döner, cart isteklerine sahteDummyJson gibi davranır; tüm URL'leri kaydeder.
+function aramaFetch(aramaYaniti, status = 200) {
+  const carts = sahteDummyJson();
+  const fn = async (url, init) => {
+    fn.cagrilar.push(url);
+    if (!url.startsWith(ARAMA)) return carts(url, init);
+    if (aramaYaniti instanceof Error) throw aramaYaniti;
+    return new Response(typeof aramaYaniti === 'string' ? aramaYaniti : JSON.stringify(aramaYaniti), { status });
+  };
+  fn.cagrilar = [];
+  fn.aramalar = () => fn.cagrilar.filter((u) => u.startsWith(ARAMA));
+  return fn;
+}
+const urunlerYaniti = (...products) => ({ products, total: products.length, skip: 0, limit: products.length });
+
+const UYDURMA_BILGI = /(uygun|kuru cilt|cilt tip|içer|alkol|hayvan|test edil|vegan|paraben|kullanın|sürün|tavsiye|öneri|200 ml)/i;
+
+test('ürün sorgusu yalnızca belirli ürün terimlerinden çıkarılır', () => {
+  assert.equal(K.urunSorgusuCikar(mesaj(9).mesaj), 'retinol');
+  assert.equal(K.urunSorgusuCikar(mesaj(10).mesaj), 'moisturizer');
+  assert.equal(K.urunSorgusuCikar(mesaj(11).mesaj), 'vitamin c');
+  assert.equal(K.urunSorgusuCikar(mesaj(13).mesaj), 'toner');
+  assert.equal(K.urunSorgusuCikar(mesaj(14).mesaj), null);
+  assert.equal(K.urunSorgusuCikar(mesaj(15).mesaj), null);
+  assert.equal(K.urunSorgusuCikar('Güneş kreminin fiyatı?'), 'sunscreen');
+});
+
+test('ilgililik: başlıkta tüm sorgu kelimeleri + kozmetik kategori gerekir', () => {
+  assert.equal(K.urunIlgiliMi({ title: 'Vitamin C Serum', category: 'skin-care' }, 'vitamin c'), true);
+  assert.equal(K.urunIlgiliMi({ title: 'Daily Moisturizers', category: 'beauty' }, 'moisturizer'), true);
+  assert.equal(K.urunIlgiliMi({ title: 'Vitamin Water', category: 'skin-care' }, 'vitamin c'), false);
+  assert.equal(K.urunIlgiliMi({ title: 'Ice Cream', category: 'groceries' }, 'cream'), false);
+  assert.equal(K.urunIlgiliMi({ title: 'Toner Cartridge', category: 'office' }, 'toner'), false);
+  assert.equal(K.urunIlgiliMi({ title: 'Retinol Serum' }, 'retinol'), false); // kategori yoksa kabul edilmez
+});
+
+test('sorgu URL\'si encode edilir', async () => {
+  const f = aramaFetch(urunlerYaniti());
+  await K.urunAra('vitamin c', { fetchImpl: f });
+  await K.urunAra('a&b=c#?', { fetchImpl: f });
+  assert.deepEqual(f.aramalar(), [`${ARAMA}vitamin%20c`, `${ARAMA}a%26b%3Dc%23%3F`]);
+});
+
+test('fiyat + ilgili ürün: ürün adı ve API fiyatı kullanılır', async () => {
+  const f = aramaFetch(urunlerYaniti({ id: 1, title: 'Hydra Moisturizer', category: 'skin-care', price: 19.5 }));
+  const t = await K.mesajiIsle(mesaj(10), { fetchImpl: f });
+  assert.deepEqual(f.aramalar(), [`${ARAMA}moisturizer`]);
+  assert.equal(t.konu, 'fiyat');
+  assert.equal(t.devret, false);
+  assert.match(t.cevap_taslagi, /Hydra Moisturizer: 19\.50/);
+  assert.match(t.not, /sorgu: "moisturizer"/);
+  assert.deepEqual(Object.keys(t), ['id', 'konu', 'devret', 'cevap_taslagi', 'not']);
+});
+
+test('ilgisiz search sonuçları kullanılmaz, fallback cevap aynen döner', async () => {
+  const f = aramaFetch(urunlerYaniti(
+    { title: 'Ice Cream', category: 'groceries', price: 5.49 },
+    { title: 'Red Lipstick', category: 'beauty', price: 12.99 },
+    { title: 'Moisturizer Pump Bottle', category: 'home-decoration', price: 3 },
+  ));
+  const t = await K.mesajiIsle(mesaj(10), { fetchImpl: f });
+  assert.equal(f.aramalar().length, 1);
+  assert.equal(t.cevap_taslagi, FIYAT_FALLBACK);
+  assert.equal(t.devret, false);
+  assert.doesNotMatch(JSON.stringify(t), /Ice Cream|Lipstick|Pump Bottle|5\.49|12\.99/);
+});
+
+test('0 sonuç -> fallback', async () => {
+  const t = await K.mesajiIsle(mesaj(9), { fetchImpl: aramaFetch(urunlerYaniti()) });
+  assert.equal(t.konu, 'urun-sorusu');
+  assert.equal(t.cevap_taslagi, URUN_FALLBACK);
+  assert.equal(t.devret, false);
+  assert.match(t.not, /ilgili sonuç döndürmedi/);
+});
+
+const ARAMA_HATALARI = {
+  'HTTP 500': () => aramaFetch({ message: 'Internal Server Error' }, 500),
+  'bozuk JSON': () => aramaFetch('{"products": [ bozuk'),
+  'ağ hatası': () => aramaFetch(new TypeError('fetch failed: ECONNRESET')),
+  'beklenmeyen yapı': () => aramaFetch({ items: 'yok' }),
+  'products dizi değil': () => aramaFetch({ products: 'x' }),
+};
+for (const [ad, uret] of Object.entries(ARAMA_HATALARI)) {
+  test(`search ${ad} -> fallback, devret=false, teknik detay yok`, async () => {
+    for (const [id, beklenen] of [[10, FIYAT_FALLBACK], [13, URUN_FALLBACK]]) {
+      const f = uret();
+      const t = await K.mesajiIsle(mesaj(id), { fetchImpl: f });
+      assert.equal(f.aramalar().length, 1);
+      assert.equal(t.cevap_taslagi, beklenen);
+      assert.equal(t.devret, false);
+      assert.doesNotMatch(t.not, /(fetch failed|ECONN|TypeError|SyntaxError|Internal Server Error|500|bozuk|JSON)/);
+    }
+  });
+}
+
+test('search timeout -> fallback', async () => {
+  const asili = (url, { signal }) => new Promise((_, reject) => signal.addEventListener('abort', () => reject(signal.reason)));
+  const t = await K.mesajiIsle(mesaj(10), { fetchImpl: asili, timeoutMs: 50 });
+  assert.equal(t.cevap_taslagi, FIYAT_FALLBACK);
+  assert.equal(t.devret, false);
+});
+
+test('belirli ürün olmayan fiyat (14) ve hayvan testi (15) mesajlarında search çağrılmaz', async () => {
+  for (const id of [14, 15]) {
+    const f = aramaFetch(urunlerYaniti({ title: 'Retinol Serum', category: 'skin-care', price: 1 }));
+    const t = await K.mesajiIsle(mesaj(id), { fetchImpl: f });
+    assert.equal(f.cagrilar.length, 0, `mesaj ${id}`);
+    assert.equal(t.cevap_taslagi, id === 14 ? FIYAT_FALLBACK : URUN_FALLBACK);
+  }
+});
+
+test('sipariş mesajı 8 için search çağrılmaz (yalnız cart isteği)', async () => {
+  const f = aramaFetch(urunlerYaniti({ title: 'Sunscreen SPF 50', category: 'skin-care', price: 1 }));
+  const t = await K.mesajiIsle(mesaj(8), { fetchImpl: f });
+  assert.equal(t.konu, 'siparis-durumu');
+  assert.deepEqual(f.cagrilar, ['https://dummyjson.com/carts/4']);
+  assert.doesNotMatch(t.cevap_taslagi, /Sunscreen/);
+});
+
+test('ilgili ürün bulunsa da cilt uygunluğu / içerik / hayvan testi bilgisi uydurulmaz', async () => {
+  const durumlar = [
+    [9, 'Retinol Night Serum'],
+    [11, 'Vitamin C Brightening Serum'],
+    [13, 'Rose Water Toner'],
+  ];
+  for (const [id, baslik] of durumlar) {
+    const sorgu = K.urunSorgusuCikar(mesaj(id).mesaj);
+    const f = aramaFetch(urunlerYaniti({ title: baslik, category: 'skin-care', price: 9.99, description: 'Suitable for dry skin, alcohol free, cruelty free' }));
+    const t = await K.mesajiIsle(mesaj(id), { fetchImpl: f });
+    assert.deepEqual(f.aramalar(), [ARAMA + encodeURIComponent(sorgu)]);
+    assert.equal(t.konu, 'urun-sorusu');
+    assert.equal(t.devret, false);
+    assert.ok(t.cevap_taslagi.includes(baslik), `mesaj ${id}: ürün adı cevapta yok`);
+    assert.doesNotMatch(t.cevap_taslagi.replace(baslik, ''), UYDURMA_BILGI, `mesaj ${id}`);
+    assert.doesNotMatch(t.cevap_taslagi, /dry skin|alcohol|cruelty|9\.99/i, `mesaj ${id}: API açıklaması/fiyat ürün sorusuna taşındı`);
+  }
+});
+
+test('en fazla 3 ilgili ürün kullanılır; ilgisizler arada elenir', async () => {
+  const f = aramaFetch(urunlerYaniti(
+    { title: 'Toner A', category: 'skin-care', price: 1 },
+    { title: 'Ice Toner Pop', category: 'groceries', price: 2 },
+    { title: 'Toner B', category: 'beauty', price: 3 },
+    { title: 'Toner C', category: 'skin-care', price: 4 },
+    { title: 'Toner D', category: 'skin-care', price: 5 },
+  ));
+  const t = await K.mesajiIsle(mesaj(13), { fetchImpl: f });
+  assert.match(t.cevap_taslagi, /Toner A, Toner B, Toner C\./);
+  assert.doesNotMatch(t.cevap_taslagi, /Toner D|Ice Toner/);
+});
