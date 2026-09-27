@@ -1,106 +1,159 @@
 # Bölüm B — Laptop Fiyat Takibi (n8n) — Akış Açıklaması
 
-> **Durum:** Taslak — teknik doğrulama ve template import aşaması. Final `workflow.json` henüz üretilmedi.
-> Bu dosyada yalnızca doğrulanmış bilgiler yer alır; final akış tamamlanınca adım adım açıklama eklenecek.
+Dosyalar: [`workflow.json`](workflow.json) (n8n'e import edilebilir) · bu açıklama.
+Akış local n8n **2.35.7** üzerinde kuruldu ve gerçek siteye karşı çalıştırıldı (aşağıda sonuçlar).
 
-## Başlangıç şablonu (zorunlu bilgi)
+## 1. Başlangıç şablonu (zorunlu bilgi)
 
 - **Şablon adı:** Competitor price monitoring with web scraping,Google Sheets & Telegram
 - **Şablon no:** #4640
 - **Link:** https://n8n.io/workflows/4640-competitor-price-monitoring-with-web-scrapinggoogle-sheets-and-telegram/
-- **Doğrulama:** Resmi template API'sinden (`api.n8n.io/api/templates/workflows/4640`, HTTP 200) çekildi; canonical sayfa HTTP 200.
-- **Import:** Şablon JSON'u local n8n (2.35.7) instance'ına `n8n import:workflow` ile gerçekten import edildi ve
-  "Nurederm B — Laptop Fiyat Takibi (başlangıç: template #4640)" adıyla başlangıç noktası olarak kullanılıyor.
+- Şablon resmi template API'sinden çekildi, local n8n'e `n8n import:workflow` ile **gerçekten import edildi** ve aynı workflow
+  (id `QAneGL7LmmVuAy1G`) üzerinde node'lar yeniden adlandırılıp yeniden yapılandırılarak senaryoya uyarlandı — sıfırdan yeni workflow kurulmadı.
+- Şablonun orijinal akışı: Google Sheets'teki ürün URL listesini tek tek gezip (her ürün ayrı istek, aralarda Wait)
+  fiyatı Sheet'teki son fiyatla karşılaştırıyor, değişince ürün başına Telegram mesajı atıyor. **Şablonda hata dalı yok.**
 
-### Şablonun orijinal yapısı (24 node = 16 işlevsel + 8 sticky note)
+### Şablondan korunan / değiştirilen / kaldırılanlar
 
-Daily 8 AM Trigger → Fetch Product List from Sheet → Process Each Product in Batches of 1 → Pause Between Requests →
-Load Product Page HTML → Extract Current Price from HTML → Normalize Price Values → Compute Price Change →
-Clean Up Parsed Fields → Is Price Changed? → (Build Telegram Alert Message → Send Price Alert via Telegram) +
-(Log Price History to Sheet → Pause Before Updating Sheet → Update Last Price in Master Sheet)
+| Şablon node'u | Karar | Final node | Ne yapıldı |
+|---|---|---|---|
+| Daily 8 AM Trigger | Korundu | **Daily Schedule (08:00)** | Günde 1 kez 08:00; workflow timezone'u `Europe/Istanbul` |
+| Load Product Page HTML | Değiştirildi | **Fetch All Laptop Pages** | Tek kategori URL'si + yerleşik pagination; tarayıcı `User-Agent` başlığı fikri korundu; hata çıkışı + retry |
+| Extract Current Price from HTML | Değiştirildi | **Extract Products** | Aynı HTML node / CSS selector yaklaşımı; laptop kartlarından 4 alan dizi olarak |
+| Normalize Price Values | Değiştirildi | **Normalize & Validate** | `$` temizleyip sayıya çevirme korundu; eşleştirme, doğrulama, mutlak link, tekilleştirme eklendi |
+| Compute Price Change | Değiştirildi | **Compare Previous vs Current** | Önceki/güncel fiyat + % fark mantığı korundu; önceki değer Data Table geçmişinden |
+| Is Price Changed? | Değiştirildi | **Has New or Price Changed?** | `status` = NEW veya PRICE_CHANGED |
+| Build Telegram Alert Message | Değiştirildi | **Build Change Notification** | Ürün başına mesaj yerine tek kısa özet |
+| Send Price Alert via Telegram | Korundu | **Send Price Alert via Telegram** | Credential yok → disabled |
+| Log Price History to Sheet | Değiştirildi (tip) | **Insert Snapshot** | Google Sheets yerine n8n Data Table insert |
+| Fetch Product List from Sheet | Kaldırıldı | — | Ürün listesi yok; kategori sayfaları taranıyor |
+| Process Each Product in Batches of 1, Pause Between Requests | Kaldırıldı | — | Pagination tek node'da; bekleme `requestInterval` ile |
+| Clean Up Parsed Fields | Kaldırıldı | — | Normalize adımında karşılanıyor |
+| Pause Before Updating Sheet, Update Last Price in Master Sheet | Kaldırıldı | — | "Son fiyat" ayrıca tutulmuyor; append-only geçmişten türetiliyor |
+| 8 sticky note | Değiştirildi | **Akış Özeti (Sticky Note)** | Tek Türkçe özet notu |
+| — | **Eklendi** | Has Valid Products?, Get Previous Snapshot, Build Error Alert, Send Error Alert via Telegram, Stop and Error | Doğrulama, geçmiş okuma ve hata dalı |
 
-Şablon, Google Sheets'teki ürün URL listesini tek tek gezip (her ürün sayfası ayrı istek) fiyatı Sheet'teki son fiyatla
-karşılaştırıyor ve fiyat değişince Telegram'a bildirim atıyor. **Şablonda hata dalı yok.**
+## 2. Akış adım adım
 
-### Şablondan alınan fikir / node'lar ve planlanan değişiklikler
+```
+Daily Schedule (08:00)
+→ Fetch All Laptop Pages ──(hata çıkışı)──────────────────────────┐
+→ Extract Products                                                │
+→ Normalize & Validate                                            │
+→ Has Valid Products? ──(false: 0 ürün / doğrulama hatası)────────┤
+→ Get Previous Snapshot                                           │
+→ Compare Previous vs Current                                     │
+   ├→ Insert Snapshot                                             │
+   └→ Has New or Price Changed? ─(true)→ Build Change Notification │
+                                   → Send Price Alert via Telegram│
+                                                                  ▼
+                         Build Error Alert → Send Error Alert via Telegram → Stop and Error
+```
 
-| Şablon node'u | Karar | Bizim akıştaki karşılığı |
-|---|---|---|
-| Daily 8 AM Trigger | **Korunuyor** | Günlük Schedule tetikleyici (08:00) |
-| Load Product Page HTML | **Değişiyor** | Tek kategori URL'si + HTTP Request **pagination** (`?page=N`), text yanıt, tarayıcı `User-Agent` başlığı fikri korunuyor, hata çıkışı ekleniyor |
-| Extract Current Price from HTML | **Değişiyor** | HTML node (CSS selector yaklaşımı korunuyor): laptop kartlarından ad, fiyat, yorum sayısı, link |
-| Normalize Price Values | **Değişiyor** | `$` temizleyip sayıya çevirme mantığı korunuyor; alanları eşleştirme, doğrulama, `product_key` ve tekilleştirme ekleniyor |
-| Compute Price Change | **Değişiyor** | Önceki/şimdiki fiyat ve % fark mantığı korunuyor; karşılaştırma Data Table'daki önceki snapshot ile `product_key` üzerinden, durumlar NEW / PRICE_CHANGED / NO_CHANGE |
-| Is Price Changed? | **Değişiyor** | "NEW veya PRICE_CHANGED var mı?" kontrolü |
-| Build Telegram Alert Message | **Değişiyor** | Ürün başına mesaj yerine tek özet bildirim mesajı |
-| Send Price Alert via Telegram | **Korunuyor** | Bildirim kanalı Telegram (credential/chat id yer tutucu) |
-| Fetch Product List from Sheet | **Kaldırılıyor** | Ürün listesi yok; kategori sayfaları taranıyor |
-| Process Each Product in Batches of 1 | **Kaldırılıyor** | Pagination tek node'da tüm sayfaları çekiyor |
-| Pause Between Requests | **Kaldırılıyor** | Yerine pagination `requestInterval` (istekler arası bekleme) |
-| Clean Up Parsed Fields | **Kaldırılıyor** | Normalizasyon adımında karşılanıyor |
-| Log Price History to Sheet | **Değişiyor** | Google Sheets yerine n8n Data Table'a tarih damgalı snapshot insert |
-| Pause Before Updating Sheet, Update Last Price in Master Sheet | **Kaldırılıyor** | "Son fiyat" ayrı tabloda tutulmuyor; snapshot geçmişinden türetiliyor |
-| 8 sticky note | **Değişiyor** | Senaryoya uygun açıklama notlarıyla değiştirilecek |
-| — (şablonda yok) | **Ekleniyor** | Hata dalı: site açılamazsa / 0 ürün → hata bildirimi + **Stop and Error** |
+1. **Daily Schedule (08:00)** — Schedule Trigger, `days` aralığı 1, saat 08:00. Instance'ta `GENERIC_TIMEZONE` tanımlı
+   olmadığı için (n8n varsayılanı America/New_York) workflow ayarında `timezone: Europe/Istanbul` açıkça verildi;
+   trigger çıktısında `Europe/Istanbul (UTC+03:00)` görüldü.
+2. **Fetch All Laptop Pages** — HTTP Request, yerleşik pagination:
+   - Query `page = {{ $pageCount + 1 }}`, bitiş: `{{ !String($response.body).includes('rel="next"') }}`
+   - En fazla 30 istek, istekler arası 400 ms, timeout 15 sn, yanıt text; her sayfa ayrı item.
+   - `onError: continueErrorOutput` (hata çıkışı hata dalına bağlı), `retryOnFail` 2 deneme / 1 sn.
+3. **Extract Products** — HTML node, her sayfa için dizi olarak:
+   - `product_name`: `div.card.thumbnail a.title` → **`title` attribute** (görünen metin 117 üründen 98'inde `...` ile kısaltılmış)
+   - `price_raw`: `span[itemprop="price"]` (ör. `$416.99`)
+   - `review_raw`: `span[itemprop="reviewCount"]`
+   - `product_href`: `a.title` → `href` (göreli)
+   - `item_count_text`: `p.item-count` (sitenin kendi toplamı, "117 items") — çapraz kontrol için
+4. **Normalize & Validate** — Code node, 20 sayfayı tek bir current-run yapısında birleştirir:
+   - Sayfa bazında dört dizinin uzunluğu eşit değilse hata kaydı (sessizce kabul edilmez).
+   - `price`: `$`, virgül ve boşluk temizlenip gerçek **number** (ör. `416.99`, `1149`); geçersizse kayıt reddedilir.
+   - `review_count`: **number**; `product_link`: **mutlak URL** (`https://webscraper.io/...`), sorgu/fragment/son `/` temizlenir.
+   - `product_key` = normalize edilmiş mutlak ürün linki (ad benzersiz değil: 117 üründe 52 farklı ad; link 117/117 benzersiz).
+   - `product_key` ile tekilleştirme; benzersiz ürün sayısı sitedeki "117 items" ile uyuşmazsa hata.
+   - Her durumda **tek bir özet item** döner: `run_ts`, `page_count`, `product_count`, `expected_count`, `valid`, `errors`, `products[]`.
+5. **Has Valid Products?** — `valid === true` ve `product_count > 0` → normal akış; değilse hata dalı.
+6. **Get Previous Snapshot** — Data Table `get` (tüm satırlar). **Always Output Data** açık: tablo boşken de 1 boş item
+   döner, böylece ilk çalıştırmada akış durmaz (gerçek execution ile doğrulandı).
+7. **Compare Previous vs Current** — Karşılaştırma snapshot yazılmadan **önce** yapılır. Append-only tabloda her
+   `product_key` için **en güncel** önceki kayıt (`run_ts`, eşitlikte satır `id`) bulunur:
+   - `NEW`: geçmişte kayıt yok (`previous_price: null`)
+   - `PRICE_CHANGED`: önceki fiyat ≠ güncel fiyat (kuruş hassasiyetinde karşılaştırma)
+   - `NO_CHANGE`: aynı
+   - Her ürün çıktısı: `status, product_key, product_name, price, previous_price, price_diff_pct, review_count, product_link, run_ts, previous_run_ts`
+8. **Insert Snapshot** — Data Table `insert`, append-only (update/overwrite yok). Bir çalıştırmanın tüm satırları aynı `run_ts`'i paylaşır.
+9. **Has New or Price Changed?** → **Build Change Notification** → **Send Price Alert via Telegram** —
+   Yalnız NEW/PRICE_CHANGED ürünler true çıkışına gider. Tek özet mesaj: NEW ve PRICE_CHANGED sayıları, her gruptan ilk
+   5 ürün, gerisi "… ve N ürün daha" (ilk çalıştırmada 117 satırlık dev mesaj yerine ~12 satır). Ürün adları HTML-escape edilir
+   (Telegram varsayılan parse modu HTML). NO_CHANGE-only çalıştırmada bu dala hiç item gitmez.
+10. **Hata dalı** — **Build Error Alert** iki kaynağı ayırt eder:
+    - Fetch hata çıkışı → `SITE_UNREACHABLE` (DNS/ağ hatasında hata mesajı, HTTP hatasında `HTTP <kod>`; HTML gövde mesaja eklenmez)
+    - Has Valid Products? = false → `ZERO_PRODUCTS` ("0 ürün çıkarıldı") veya `VALIDATION_FAILED`
+    Mesajda neden, detay, kaynak site, zaman ve execution id bulunur → **Send Error Alert via Telegram** → **Stop and Error**:
+    execution **başarısız** olarak biter, akış sessizce "başarılı" bitmez.
 
-## Kaynak site (canlı doğrulandı)
+## 3. Storage — n8n Data Table
 
-- URL: https://webscraper.io/test-sites/e-commerce/static/computers/laptops — `?page=N` ile sayfalı.
-- **20 sayfa, 117 ürün** (1–19. sayfalar 6'şar, 20. sayfa 3 ürün). Sayfada ayrıca `<p class="item-count">117 items</p>` var.
-- Son sayfa sinyali: 1–19. sayfalarda `<a class="page-link next" ... rel="next">` var; 20. sayfada "Next" öğesi
-  `page-item disabled` ve `rel="next"` yok. 21. sayfa **HTTP 200 + 0 ürün** döndürüyor (404 değil).
-- Ürün kartı: `div.card.thumbnail`
-  - Ad: `a.title` elemanının **`title` attribute'u** — görünen metin 117 üründen 98'inde `...` ile kısaltılmış.
-  - Fiyat: `span[itemprop="price"]` → `$416.99` biçimi; ondalık basamak değişken (`$1149`, `$372.7`), binlik ayırıcı yok.
-  - Yorum sayısı: `span[itemprop="reviewCount"]`.
-  - Link: `a.title` `href` → göreli (`/test-sites/e-commerce/static/product/31`); mutlak URL'ye çevrilecek.
-- Ad benzersiz değil (117 üründe 52 farklı ad); **link benzersiz (117/117)** → `product_key` = normalize edilmiş mutlak ürün linki.
+- Tercih: **n8n Data Table** — n8n'e yerleşik, harici hesap/credential gerektirmez, execution'lar arasında kalıcıdır.
+- Tablo: `laptop_price_snapshots` (local id `qhlRYllQeTscy8zz`), append-only; her çalıştırmada her ürün için bir satır.
 
-## Planlanan pagination (local n8n 2.35.7'de test edildi)
+| Kolon | Tip |
+|---|---|
+| `run_ts` | date |
+| `product_key` | string |
+| `product_name` | string |
+| `price` | number |
+| `review_count` | number |
+| `product_link` | string |
 
-HTTP Request node'unun yerleşik pagination'ı:
-- Mod: *Update a Parameter in Each Request* → query `page = {{ $pageCount + 1 }}`
-- Bitiş: *Other* → `{{ !String($response.body).includes('rel="next"') }}` (son sayfada durur, fazladan istek atmaz)
-- Güvenlik: *Limit Pages Fetched* (maksimum istek sınırı), istekler arası bekleme (`requestInterval`), timeout
-- Yanıt formatı: text
+- **Başka bir n8n instance'ına import ederken:** Data Table workflow ile birlikte taşınmaz. Aynı ad (`laptop_price_snapshots`)
+  ve yukarıdaki kolonlarla tablo önceden oluşturulmalıdır. Node'lar tabloyu ID ile değil **adıyla** (`mode: name`) seçer;
+  ad farklıysa Get Previous Snapshot ve Insert Snapshot node'larında tablo yeniden seçilmelidir.
 
-Geçici test workflow'u ile tek execution'da **20 item (sayfa başına 1), toplam 117 ürün kartı** alındı ve 20. sayfada
-durduğu doğrulandı. Test workflow'u sonrasında arşivlendi.
+## 4. Bildirim
 
-## Storage tercihi: n8n Data Table
+- Kanal: Telegram (şablonun bildirim fikri korundu). Node'lar workflow'da görünür ve bağlıdır; ancak **credential
+  kurulmadığı için ikisi de disabled** ve `chatId` yer tutucu (`TELEGRAM_CHAT_ID_BURAYA`). Bu yüzden testlerde
+  **Telegram'a canlı mesaj gönderilmedi**; gönderilecek mesaj metinleri execution çıktısında doğrulandı.
+- Etkinleştirmek için: Telegram credential'ı seç, `chatId`'yi gir, iki node'u enable et. Disabled node veriyi aynen geçirdiği
+  için hata dalında Stop and Error yine çalışır.
 
-- Neden: n8n'e yerleşik, harici hesap/credential gerektirmez, execution'lar arasında kalıcıdır, node'dan
-  `get` (filtre/sıralama/tümü) ve `insert` yapılabilir; bu case'in "önceki çalışmayla karşılaştır" ihtiyacına yeterli.
-- Tablo: `laptop_price_snapshots` (final aşamada oluşturulacak). Her çalıştırmada her ürün için bir satır:
+## 5. Gerçek çalıştırma sonuçları (local n8n 2.35.7)
 
-| Kolon | Tip | Açıklama |
-|---|---|---|
-| `run_ts` | date | Çalıştırmanın zaman damgası (tüm satırlarda aynı) |
-| `product_key` | string | Normalize edilmiş mutlak ürün linki |
-| `product_name` | string | Tam ürün adı (`title` attribute) |
-| `price` | number | `$` temizlenmiş sayısal fiyat |
-| `review_count` | number | Yorum sayısı |
-| `product_link` | string | Mutlak ürün linki |
+| Çalıştırma | Execution | Sonuç | Sayfa / ürün | NEW / PRICE_CHANGED / NO_CHANGE | Tabloya eklenen |
+|---|---|---|---|---|---|
+| Run 1 (tablo boş) | 35 | success | 20 / 117 | **117 / 0 / 0** | 117 (1 `run_ts`) |
+| Run 2 (hemen tekrar) | 36 | success | 20 / 117 | **0 / 0 / 117** | 117 (toplam 234, 2 `run_ts`) |
 
-- Taşınabilirlik notu: Başka bir n8n instance'ına import edildiğinde aynı ad ve kolonlarla tablo oluşturulmalı;
-  node'larda tablo gerekirse yeniden seçilmelidir (Data Table ID instance'a özeldir).
+- Run 1: Get Previous Snapshot boş tabloda 1 boş item üretti, akış devam etti; bildirim metni 117 NEW için kısaltılmış özet olarak üretildi.
+- Run 2: "Has New or Price Changed?" true çıkışına **0 item** gitti; Build Change Notification / Send Price Alert çalışmadı.
+- Tablodaki `price` ve `review_count` değerleri sayısal (SQLite `real`) olarak saklanıyor.
 
-## Değişiklik tespiti (plan)
+### Hata dalı testleri (final workflow'a dokunmadan, geçici kopyalarla; kopyalar sonra arşivlendi)
 
-- Her mevcut ürün, `product_key` üzerinden **en son önceki snapshot** ile karşılaştırılır:
-  - `NEW`: önceki çalıştırmada ürün yok
-  - `PRICE_CHANGED`: önceki fiyat ≠ güncel fiyat
-  - `NO_CHANGE`: aynı
-- İlk çalıştırmada önceki snapshot olmadığı için tüm ürünlerin `NEW` sayılması beklenen davranıştır
-  (ilk çalıştırmada bildirimi bastırma daha sonra ek özellik olarak değerlendirilecek).
-- REMOVED (kaybolan ürün) tespiti bu aşamada kapsam dışı.
+| Test | Yöntem | Execution | Yol | Sonuç |
+|---|---|---|---|---|
+| A — site açılamıyor (ağ/DNS) | URL host'u `webscraper.invalid` | 41 | Fetch hata çıkışı → Build Error Alert → Send Error Alert → Stop and Error | **error**, `SITE_UNREACHABLE` (ENOTFOUND) |
+| A2 — HTTP hata kodu | Gerçek 404 dönen URL | 42 | aynı | **error**, `SITE_UNREACHABLE: HTTP 404` |
+| B — 0 ürün | Ürün seçicileri eşleşmeyen class'a çevrildi | 43 | Has Valid Products? false → Build Error Alert → … → Stop and Error | **error**, `ZERO_PRODUCTS` |
 
-## Hata yönetimi (plan)
+Hiçbir hata testinde tabloya satır eklenmedi (234 satır korundu).
 
-İki ayrı hata senaryosu, ortak bir hata bildirim dalına bağlanır:
-- **A) Site açılamıyor:** HTTP Request node'unun hata çıkışı (ağ hatası / HTTP hata kodu / timeout).
-- **B) 0 ürün:** İstek başarılı olsa bile normalize edilen ürün sayısı 0 ise.
+## 6. Karşılaşılan gerçek sorunlar
 
-Her iki durumda: hata bildirim mesajı hazırlanır → bildirim node'u → **Stop and Error** ile execution **başarısız**
-olarak biter; akış sessizce "başarılı" bitmez. Credential kurulumu zorunlu olmadığından bildirim node'ları yer tutucu
-credential ile tasarlanacak.
+1. **Code node sandbox'ında `URL` yok:** İlk Run 1 denemesinde (execution 33) 117 ürünün tamamı geçersiz sayıldı.
+   Geçici bir probe workflow ile `ReferenceError: URL is not defined` doğrulandı (`try/catch` hatayı yutup linki `null` yapıyordu).
+   Doğrulama katmanı sayesinde yanlış veri yazılmadı, akış hata dalına gitti. Link normalizasyonu string işlemleriyle yeniden yazıldı.
+2. **Site "soft-404" döndürüyor:** `…/static/computers/laptops-yok-404` gibi bilinmeyen alt yollar HTTP **200** + ürünsüz sayfa
+   döndürüyor; bu yüzden ilk HTTP hata testi hata çıkışına değil 0 ürün kontrolüne düştü (yine başarısız bitti). Gerçek 404 dönen
+   bir URL ile tekrar test edildi. Sonuç: yanlış bir kategori URL'si HTTP hatası değil `ZERO_PRODUCTS` olarak raporlanır.
+3. **HTTP hata item'ında `message` yok:** 404'te hata item'ı `error.statusCode` + HTML gövde içeriyor; ilk sürümde detay
+   "bilinmeyen hata" yazıyordu. Build Error Alert `HTTP <kod>` yazacak şekilde düzeltildi (HTML gövde mesaja eklenmez).
+4. **Timezone:** Instance'ta `GENERIC_TIMEZONE` yok; 08:00'in İstanbul saati olması için workflow ayarına `Europe/Istanbul` verildi.
+5. DNS hatasında n8n, Stop and Error'ın execution seviyesindeki hata metnini kendi genel mesajıyla ("The connection cannot be
+   established…") gösteriyor; ayrıntılı neden Build Error Alert mesajında korunuyor.
+
+## 7. Kapsam dışı (henüz yapılmadı)
+
+- İlk çalıştırmada bildirimi bastırma (baseline): ilk çalıştırmada 117 NEW bildirimi beklenen davranış.
+- Kaybolan ürün (REMOVED) tespiti.
+- Kontrollü PRICE_CHANGED senaryosu testi ve ekran görüntüleri.
+- Data Table büyüdükçe tüm satırları okumak yerine yalnız son `run_ts`'i okumak (üretim notu).

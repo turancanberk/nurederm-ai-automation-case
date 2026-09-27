@@ -1,0 +1,613 @@
+{
+  "name": "Nurederm B — Laptop Fiyat Takibi (başlangıç: template #4640)",
+  "description": "webscraper.io laptop kategorisini günlük tarar, Data Table'da snapshot tutar, NEW/PRICE_CHANGED ürünleri bildirir; HTTP hatası veya 0 üründe hata dalı.",
+  "nodes": [
+    {
+      "id": "9b9932ec-8cfd-4096-965b-592b13a1fb8e",
+      "name": "Daily Schedule (08:00)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "position": [
+        0,
+        300
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "daysInterval": 1,
+              "triggerAtHour": 8,
+              "triggerAtMinute": 0
+            }
+          ]
+        }
+      },
+      "typeVersion": 1.2
+    },
+    {
+      "id": "aa49653b-cf9f-449b-953d-a9a19ac74187",
+      "name": "Fetch All Laptop Pages",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        240,
+        300
+      ],
+      "parameters": {
+        "url": "https://webscraper.io/test-sites/e-commerce/static/computers/laptops",
+        "sendHeaders": true,
+        "specifyHeaders": "json",
+        "jsonHeaders": "{\n  \"User-Agent\": \"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:119.0) Gecko/20100101 Firefox/119.0\",\n  \"Accept\": \"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\"\n}",
+        "options": {
+          "timeout": 15000,
+          "response": {
+            "response": {
+              "responseFormat": "text",
+              "outputPropertyName": "data"
+            }
+          },
+          "pagination": {
+            "pagination": {
+              "paginationMode": "updateAParameterInEachRequest",
+              "parameters": {
+                "parameters": [
+                  {
+                    "type": "qs",
+                    "name": "page",
+                    "value": "={{ $pageCount + 1 }}"
+                  }
+                ]
+              },
+              "paginationCompleteWhen": "other",
+              "completeExpression": "={{ !String($response.body).includes('rel=\"next\"') }}",
+              "limitPagesFetched": true,
+              "maxRequests": 30,
+              "requestInterval": 400
+            }
+          }
+        }
+      },
+      "typeVersion": 4.2,
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 1000
+    },
+    {
+      "id": "5dbc3d45-96d6-4b71-8d3f-2513f960e265",
+      "name": "Extract Products",
+      "type": "n8n-nodes-base.html",
+      "position": [
+        480,
+        280
+      ],
+      "parameters": {
+        "operation": "extractHtmlContent",
+        "sourceData": "json",
+        "dataPropertyName": "data",
+        "extractionValues": {
+          "values": [
+            {
+              "key": "product_name",
+              "cssSelector": "div.card.thumbnail a.title",
+              "returnValue": "attribute",
+              "attribute": "title",
+              "returnArray": true
+            },
+            {
+              "key": "price_raw",
+              "cssSelector": "div.card.thumbnail span[itemprop=\"price\"]",
+              "returnValue": "text",
+              "returnArray": true
+            },
+            {
+              "key": "review_raw",
+              "cssSelector": "div.card.thumbnail span[itemprop=\"reviewCount\"]",
+              "returnValue": "text",
+              "returnArray": true
+            },
+            {
+              "key": "product_href",
+              "cssSelector": "div.card.thumbnail a.title",
+              "returnValue": "attribute",
+              "attribute": "href",
+              "returnArray": true
+            },
+            {
+              "key": "item_count_text",
+              "cssSelector": "p.item-count",
+              "returnValue": "text",
+              "returnArray": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "typeVersion": 1.2
+    },
+    {
+      "id": "76ad9683-bae1-4f95-af09-44598d9448d1",
+      "name": "Normalize & Validate",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        720,
+        280
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Tüm sayfaların extraction sonuçlarını tek bir current-run yapısında birleştirir ve doğrular.\n// Şablondaki \"Normalize Price Values\" mantığı ($ temizleyip sayıya çevirme) korunmuştur.\n// 0 ürün / doğrulama hatasında da tek bir özet item döner; akış sessizce kaybolmaz.\nconst SOURCE_URL = 'https://webscraper.io/test-sites/e-commerce/static/computers/laptops';\nconst BASE = 'https://webscraper.io';\nconst runTs = new Date().toISOString();\nconst asArray = (v) => (Array.isArray(v) ? v : v === undefined || v === null || v === '' ? [] : [v]);\n\n// Not: n8n Code sandbox'ında URL sınıfı tanımlı değil; mutlak link string işlemleriyle üretilir.\nconst toAbsoluteLink = (href) => {\n  const h = String(href ?? '').trim();\n  let abs;\n  if (/^https?:\\/\\//i.test(h)) abs = h;\n  else if (h.startsWith('//')) abs = 'https:' + h;\n  else if (h.startsWith('/')) abs = BASE + h;\n  else return null;\n  abs = abs.split('#')[0].split('?')[0].replace(/\\/+$/, '').replace(/^http:\\/\\//i, 'https://');\n  return /^https:\\/\\/webscraper\\.io\\/\\S+$/i.test(abs) ? abs : null;\n};\n\nconst errors = [];\nconst byKey = new Map();\nlet rawCount = 0;\nlet duplicateCount = 0;\nlet expectedCount = null;\n\nconst pages = $input.all();\npages.forEach((item, index) => {\n  const page = index + 1;\n  const j = item.json;\n  const names = asArray(j.product_name);\n  const prices = asArray(j.price_raw);\n  const reviews = asArray(j.review_raw);\n  const links = asArray(j.product_href);\n  if (expectedCount === null) {\n    const m = String(j.item_count_text || '').match(/(\\d+)\\s+items?/i);\n    if (m) expectedCount = Number(m[1]);\n  }\n  const n = names.length;\n  if (prices.length !== n || reviews.length !== n || links.length !== n) {\n    errors.push(`Sayfa ${page}: liste uzunlukları uyuşmuyor (ad ${n}, fiyat ${prices.length}, yorum ${reviews.length}, link ${links.length})`);\n    return;\n  }\n  for (let k = 0; k < n; k++) {\n    rawCount++;\n    const name = String(names[k] ?? '').trim();\n    const priceText = String(prices[k] ?? '').replace(/[$,\\s]/g, '');\n    const price = /^\\d+(\\.\\d+)?$/.test(priceText) ? Number(priceText) : NaN;\n    const reviewText = String(reviews[k] ?? '').replace(/\\D/g, '');\n    const reviewCount = reviewText === '' ? NaN : Number(reviewText);\n    const link = toAbsoluteLink(links[k]);\n    if (!name || !Number.isFinite(price) || !Number.isInteger(reviewCount) || !link) {\n      errors.push(`Sayfa ${page}, ürün ${k + 1}: geçersiz ad/fiyat/yorum/link`);\n      continue;\n    }\n    if (byKey.has(link)) {\n      duplicateCount++;\n      continue;\n    }\n    byKey.set(link, { product_key: link, product_name: name, price, review_count: reviewCount, product_link: link });\n  }\n});\n\nconst products = [...byKey.values()];\nif (expectedCount !== null && products.length !== expectedCount) {\n  errors.push(`Sitedeki ürün sayısı (${expectedCount}) ile çıkarılan benzersiz ürün sayısı (${products.length}) uyuşmuyor`);\n}\n\nreturn [{\n  json: {\n    run_ts: runTs,\n    source_url: SOURCE_URL,\n    page_count: pages.length,\n    raw_count: rawCount,\n    product_count: products.length,\n    expected_count: expectedCount,\n    duplicate_count: duplicateCount,\n    valid: errors.length === 0 && products.length > 0,\n    errors: errors.slice(0, 10),\n    products,\n  },\n}];\n"
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "5feae925-0642-40d1-89be-c220a5a1c8a2",
+      "name": "Compare Previous vs Current",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        1440,
+        200
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Şablondaki \"Compute Price Change\" mantığı (önceki/güncel fiyat + % fark) Data Table geçmişine uyarlandı.\n// Karşılaştırma, güncel snapshot tabloya yazılmadan ÖNCE yapılır.\nconst current = $('Normalize & Validate').first().json;\n// İlk çalıştırmada tablo boşsa Get Previous Snapshot boş bir item döner; product_key'i olmayanlar yok sayılır.\nconst previousRows = $input.all().map((i) => i.json).filter((r) => r && typeof r.product_key === 'string' && r.product_key);\nconst cents = (v) => Math.round(Number(v) * 100);\nconst ts = (r) => {\n  const t = Date.parse(String(r.run_ts));\n  return Number.isFinite(t) ? t : 0;\n};\n\n// Append-only tabloda her product_key için EN GÜNCEL önceki kaydı bul (run_ts; eşitlikte satır id'si).\nconst latest = new Map();\nfor (const row of previousRows) {\n  const prev = latest.get(row.product_key);\n  if (!prev || ts(row) > ts(prev) || (ts(row) === ts(prev) && Number(row.id || 0) > Number(prev.id || 0))) {\n    latest.set(row.product_key, row);\n  }\n}\n\nreturn current.products.map((p) => {\n  const prev = latest.get(p.product_key);\n  const previousPrice = prev ? Number(prev.price) : null;\n  let status = 'NEW';\n  if (prev) status = cents(previousPrice) !== cents(p.price) ? 'PRICE_CHANGED' : 'NO_CHANGE';\n  const priceDiffPct = prev && previousPrice ? Number((((p.price - previousPrice) / previousPrice) * 100).toFixed(2)) : null;\n  return {\n    json: {\n      status,\n      product_key: p.product_key,\n      product_name: p.product_name,\n      price: p.price,\n      previous_price: previousPrice,\n      price_diff_pct: priceDiffPct,\n      review_count: p.review_count,\n      product_link: p.product_link,\n      run_ts: current.run_ts,\n      previous_run_ts: prev ? prev.run_ts : null,\n    },\n  };\n});\n"
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "21c27cb9-c6bc-4cc3-9ad1-3d37fc6fbc3d",
+      "name": "Has New or Price Changed?",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        1680,
+        320
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1a0d6f0-0001-4c1e-9a01-000000000001",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "NEW",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "c1a0d6f0-0002-4c1e-9a01-000000000002",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "PRICE_CHANGED",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "typeVersion": 2.2
+    },
+    {
+      "id": "50274daa-48c7-4c58-aaf5-264013582f97",
+      "name": "Build Change Notification",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        1920,
+        300
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Şablondaki \"Build Telegram Alert Message\" fikri korunur; ürün başına mesaj yerine tek, kısa özet mesaj üretilir.\n// Buraya yalnız NEW / PRICE_CHANGED ürünler gelir.\nconst changed = $input.all().map((i) => i.json);\nif (changed.length === 0) return [];\nconst esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst fmt = (n) => `$${Number(n).toFixed(2)}`;\nconst MAX = 5;\nconst news = changed.filter((c) => c.status === 'NEW');\nconst priceChanged = changed.filter((c) => c.status === 'PRICE_CHANGED');\n\nconst lines = [\n  '🛒 Laptop fiyat takibi — değişiklik bildirimi',\n  `Zaman: ${changed[0].run_ts}`,\n  `Yeni ürün: ${news.length} · Fiyatı değişen: ${priceChanged.length}`,\n];\nif (priceChanged.length) {\n  lines.push('', '💲 Fiyatı değişenler:');\n  for (const c of priceChanged.slice(0, MAX)) {\n    const sign = c.price_diff_pct > 0 ? '+' : '';\n    lines.push(`• ${esc(c.product_name)}: ${fmt(c.previous_price)} → ${fmt(c.price)} (${sign}${c.price_diff_pct}%)`);\n  }\n  if (priceChanged.length > MAX) lines.push(`… ve ${priceChanged.length - MAX} ürün daha`);\n}\nif (news.length) {\n  lines.push('', '🆕 Yeni ürünler:');\n  for (const c of news.slice(0, MAX)) lines.push(`• ${esc(c.product_name)} — ${fmt(c.price)}`);\n  if (news.length > MAX) lines.push(`… ve ${news.length - MAX} ürün daha`);\n}\nlines.push('', 'Kaynak: https://webscraper.io/test-sites/e-commerce/static/computers/laptops');\n\nreturn [{ json: { message: lines.join('\\n'), new_count: news.length, price_changed_count: priceChanged.length } }];\n"
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "9ebdbe49-fda1-42f5-99d9-a5e1e3ab800f",
+      "name": "Send Price Alert via Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "position": [
+        2160,
+        300
+      ],
+      "webhookId": "39287ce3-3a7e-4c7e-b8ee-b11ebb83bfb8",
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "TELEGRAM_CHAT_ID_BURAYA",
+        "text": "={{ $json.message }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "typeVersion": 1.2,
+      "disabled": true
+    },
+    {
+      "id": "6e6076d6-2db2-401b-af63-c6d00d1fd5a6",
+      "name": "Has Valid Products?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        960,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b2b0d6f0-0001-4c1e-9a01-000000000001",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "b2b0d6f0-0002-4c1e-9a01-000000000002",
+              "leftValue": "={{ $json.product_count }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "841d3101-1c13-4307-9d4e-f51034241e67",
+      "name": "Get Previous Snapshot",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1200,
+        200
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "laptop_price_snapshots"
+        },
+        "returnAll": true
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "id": "9c9a55eb-6361-4bda-8437-3168bdcad599",
+      "name": "Insert Snapshot",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1680,
+        60
+      ],
+      "parameters": {
+        "resource": "row",
+        "operation": "insert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "laptop_price_snapshots"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "run_ts": "={{ $json.run_ts }}",
+            "product_key": "={{ $json.product_key }}",
+            "product_name": "={{ $json.product_name }}",
+            "price": "={{ $json.price }}",
+            "review_count": "={{ $json.review_count }}",
+            "product_link": "={{ $json.product_link }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "run_ts",
+              "displayName": "run_ts",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true,
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "product_key",
+              "displayName": "product_key",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "product_name",
+              "displayName": "product_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "price",
+              "displayName": "price",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "review_count",
+              "displayName": "review_count",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "product_link",
+              "displayName": "product_link",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "033e4387-d37d-49a8-81d6-0f0b9bec13c2",
+      "name": "Build Error Alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        560
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "// Hata dalı: (A) Fetch All Laptop Pages hata çıkışı — site açılamadı / HTTP / ağ / timeout\n//            (B) Has Valid Products? = false — 0 ürün veya doğrulama hatası\nconst SOURCE_URL = 'https://webscraper.io/test-sites/e-commerce/static/computers/laptops';\nconst esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst j = $input.first().json;\nlet reason;\nlet detail;\nif ('product_count' in j) {\n  if (j.product_count === 0) {\n    reason = 'ZERO_PRODUCTS';\n    detail = '0 ürün çıkarıldı';\n  } else {\n    reason = 'VALIDATION_FAILED';\n    detail = `${j.product_count} ürün çıkarıldı ancak doğrulama başarısız`;\n  }\n  if (Array.isArray(j.errors) && j.errors.length) detail += ` — ${j.errors.slice(0, 3).join(' | ')}`;\n} else {\n  reason = 'SITE_UNREACHABLE';\n  const e = j.error;\n  let msg;\n  // HTTP hata kodunda error.statusCode gelir (gövde HTML'dir, mesaja eklenmez); ağ/DNS/timeout hatasında error.message.\n  if (e && typeof e === 'object' && e.statusCode) msg = `HTTP ${e.statusCode}`;\n  else if (typeof e === 'string') msg = e;\n  else msg = (e && (e.message || e.description)) || 'bilinmeyen hata';\n  detail = `Site açılamadı / HTTP hatası: ${String(msg).slice(0, 200)}`;\n}\nconst failedAt = new Date().toISOString();\nconst message = [\n  '⚠️ Laptop fiyat takibi BAŞARISIZ',\n  `Neden: ${reason}`,\n  `Detay: ${esc(detail)}`,\n  `Kaynak: ${SOURCE_URL}`,\n  `Zaman: ${failedAt}`,\n  `Execution: ${$execution.id}`,\n].join('\\n');\nreturn [{ json: { reason, detail, source_url: SOURCE_URL, failed_at: failedAt, message } }];\n"
+      }
+    },
+    {
+      "id": "9806918f-0a48-4191-acca-70bc330caab2",
+      "name": "Send Error Alert via Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1440,
+        560
+      ],
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "TELEGRAM_CHAT_ID_BURAYA",
+        "text": "={{ $json.message }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "disabled": true,
+      "webhookId": "bc2978ca-0022-48cd-9a4c-069456560f7a"
+    },
+    {
+      "id": "1b744222-e4f0-4ce5-82b1-a4671d7669dc",
+      "name": "Stop and Error",
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [
+        1680,
+        560
+      ],
+      "parameters": {
+        "errorType": "errorMessage",
+        "errorMessage": "={{ $('Build Error Alert').first().json.reason }}: {{ $('Build Error Alert').first().json.detail }}"
+      }
+    },
+    {
+      "id": "e6874283-208b-480a-a193-f6670d06dee3",
+      "name": "Akış Özeti (Sticky Note)",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -340
+      ],
+      "parameters": {
+        "width": 620,
+        "height": 400,
+        "color": 5,
+        "content": "## Laptop Fiyat Takibi — Akış Özeti\n\n- Başlangıç: n8n template **#4640** (Competitor price monitoring with web scraping, Google Sheets & Telegram) — senaryoya uyarlandı.\n- **Daily Schedule**: her gün 08:00 (Europe/Istanbul).\n- **Fetch All Laptop Pages**: `?page=N` pagination; `rel=\"next\"` kalmayınca durur (20 sayfa, en fazla 30 istek).\n- **Extract Products → Normalize & Validate**: ad (title attribute), sayısal fiyat, yorum sayısı, mutlak link; `product_key` = ürün linki (117 ürün).\n- **Data Table** `laptop_price_snapshots`: her çalıştırma tarih damgalı snapshot olarak eklenir (append-only).\n- **Compare Previous vs Current**: en güncel önceki kayıtla karşılaştırma → **NEW / PRICE_CHANGED / NO_CHANGE**.\n- Yalnız NEW veya PRICE_CHANGED varsa özet Telegram bildirimi.\n- **Hata dalı**: site açılamazsa (HTTP hata çıkışı) veya 0 ürün / doğrulama hatası → hata bildirimi + **Stop and Error** (execution başarısız biter).\n- Telegram node'ları credential olmadığı için disabled."
+      }
+    }
+  ],
+  "connections": {
+    "Fetch All Laptop Pages": {
+      "main": [
+        [
+          {
+            "node": "Extract Products",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Error Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Products": {
+      "main": [
+        [
+          {
+            "node": "Normalize & Validate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has New or Price Changed?": {
+      "main": [
+        [
+          {
+            "node": "Build Change Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Change Notification": {
+      "main": [
+        [
+          {
+            "node": "Send Price Alert via Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Daily Schedule (08:00)": {
+      "main": [
+        [
+          {
+            "node": "Fetch All Laptop Pages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize & Validate": {
+      "main": [
+        [
+          {
+            "node": "Has Valid Products?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Valid Products?": {
+      "main": [
+        [
+          {
+            "node": "Get Previous Snapshot",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Error Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Previous Snapshot": {
+      "main": [
+        [
+          {
+            "node": "Compare Previous vs Current",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compare Previous vs Current": {
+      "main": [
+        [
+          {
+            "node": "Insert Snapshot",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Has New or Price Changed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Error Alert": {
+      "main": [
+        [
+          {
+            "node": "Send Error Alert via Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Error Alert via Telegram": {
+      "main": [
+        [
+          {
+            "node": "Stop and Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Istanbul"
+  },
+  "tags": []
+}

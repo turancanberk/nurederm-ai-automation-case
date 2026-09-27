@@ -49,18 +49,23 @@
   - Site: 20 sayfa / 117 ürün; ad `a.title[title]`, fiyat `span[itemprop=price]`, yorum `span[itemprop=reviewCount]`, link `a.title[href]`; `product_key` = mutlak link (adlar benzersiz değil).
   - HTTP Request pagination (`page={{ $pageCount + 1 }}`, bitiş: `rel="next"` yok) geçici test workflow'unda 20 sayfa / 117 kart döndürdü; test workflow'u arşivlendi.
   - Taslak: `B-n8n/akis-aciklama.md`.
+- **Bölüm B zorunlu workflow tamamlandı** (import edilen template workflow `QAneGL7LmmVuAy1G` uyarlandı, 15 node):
+  - Data Table `laptop_price_snapshots` (id `qhlRYllQeTscy8zz`), şu an 234 satır (Run 1 + Run 2).
+  - Run 1 (exec 35): 117 NEW; Run 2 (exec 36): 117 NO_CHANGE, bildirim dalına 0 item.
+  - Hata dalı testleri (geçici kopyalar, arşivlendi): exec 41 DNS, 42 HTTP 404, 43 0 ürün → hepsi Stop and Error ile error.
+  - Export: `B-n8n/workflow.json` (secret yok, Telegram credential referansı kaldırıldı, chatId yer tutucu; import testi yapıldı).
+  - Workflow ayarı `timezone: Europe/Istanbul`; local'de MCP erişimi (`availableInMCP`) açık, export'ta yok.
 
 ## Henüz yapılmayanlar
 
-- Bölüm B final `workflow.json` (onay bekleniyor), `akis-aciklama.md`'nin final hali.
-- `laptop_price_snapshots` Data Table'ının oluşturulması.
-- README Bölüm B + bitiş saati.
+- Ek işler (onay bekleniyor): baseline bildirim bastırma, REMOVED tespiti, kontrollü PRICE_CHANGED testi + ekran görüntüleri.
+- README bitiş saati.
 - GitHub remote + push (kullanıcı onayı bekleniyor).
 
 ## Git durumu
 
 - Branch: `main`, remote yok, push yapılmadı.
-- Commitler: `chore: proje iskeletini ve teslim yapısını hazırla` (case-brief.md çıkarılarak amend edildi), `feat: müşteri mesajı otomasyonunu tamamla`, `fix: sipariş sahipliği notunu güvenli hale getir`, `feat: talep özetini operasyon metrikleriyle geliştir`, `feat: ürün arama bonusunu güvenli şekilde ekle`. Bölüm A kapandı; sıradaki: Bölüm B.
+- Commitler: `chore: proje iskeletini ve teslim yapısını hazırla` (case-brief.md çıkarılarak amend edildi), `feat: müşteri mesajı otomasyonunu tamamla`, `fix: sipariş sahipliği notunu güvenli hale getir`, `feat: talep özetini operasyon metrikleriyle geliştir`, `feat: ürün arama bonusunu güvenli şekilde ekle`. Bölüm A kapandı. `chore: n8n template ve teknik tasarımı doğrula`, `feat: n8n fiyat takip workflowunu tamamla`.
 
 ## Zorunlular bittikten sonra değerlendirilecek
 
@@ -69,5 +74,5 @@
 - n8n first-run/baseline notification suppression.
 - REMOVED ürün tespiti.
 - Normal başarılı run ve PRICE_CHANGED run ekran görüntüleri.
-- Türkçe n8n açıklama Sticky Note'u.
+- ~~Türkçe n8n açıklama Sticky Note'u.~~ (yapıldı)
 - README design decisions / production notes.

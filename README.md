@@ -48,12 +48,13 @@ Node.js (harici npm paketi yok, runtime'da LLM/AI API yok). Tüm kararlar determ
 
 ## Bölüm B
 
-**Aşama: Bölüm B teknik doğrulama ve template import aşaması** (final `workflow.json` henüz üretilmedi).
+n8n workflow'u local n8n **2.35.7** üzerinde kuruldu ve gerçek siteye karşı çalıştırıldı. Ayrıntılı açıklama: [B-n8n/akis-aciklama.md](B-n8n/akis-aciklama.md).
 
-- Başlangıç şablonu: [Competitor price monitoring with web scraping,Google Sheets & Telegram (#4640)](https://n8n.io/workflows/4640-competitor-price-monitoring-with-web-scrapinggoogle-sheets-and-telegram/) — local n8n 2.35.7'ye import edildi.
-- Kaynak site canlı doğrulandı: 20 sayfa, 117 laptop; HTTP Request pagination ile tüm sayfaların tek execution'da çekildiği geçici bir test workflow'u ile doğrulandı.
-- Storage: n8n Data Table (`laptop_price_snapshots`). Ayrıntılar: [B-n8n/akis-aciklama.md](B-n8n/akis-aciklama.md).
-
+- **Başlangıç şablonu:** [Competitor price monitoring with web scraping,Google Sheets & Telegram (#4640)](https://n8n.io/workflows/4640-competitor-price-monitoring-with-web-scrapinggoogle-sheets-and-telegram/) — local n8n'e import edildi ve aynı workflow üzerinde uyarlandı (Google Sheets ürün listesi döngüsü kaldırıldı; tetikleyici, HTML extraction, fiyat normalizasyonu, fiyat karşılaştırma ve Telegram bildirimi fikri korundu; hata dalı eklendi).
+- **Akış:** Daily Schedule (08:00, Europe/Istanbul) → Fetch All Laptop Pages (`?page=N` pagination, `rel="next"` bitince durur) → Extract Products → Normalize & Validate (sayısal fiyat, mutlak link, `product_key` = link) → Has Valid Products? → Get Previous Snapshot → Compare Previous vs Current (NEW / PRICE_CHANGED / NO_CHANGE) → Insert Snapshot + (yalnız değişiklikte) özet Telegram bildirimi.
+- **Hata dalı:** site açılamazsa (HTTP hata çıkışı) veya 0 ürün / doğrulama hatası → Build Error Alert → Send Error Alert → **Stop and Error** (execution başarısız biter).
+- **Storage:** n8n Data Table `laptop_price_snapshots` (append-only, tarih damgalı snapshot).
+- **Bildirim:** Telegram node'ları credential olmadığı için disabled; canlı mesaj gönderilmedi, mesaj metinleri execution çıktısında doğrulandı.
 ## Nasıl çalıştırılır
 
 Gereksinim: Node.js 18+ (geliştirme ve test v22.22.3 ile yapıldı). `npm install` gerekmez.
@@ -71,6 +72,12 @@ node A-mesaj-otomasyonu/dogrula.js
 ```
 
 `isle.js` ve `dogrula.js` canlı DummyJSON API'sine istek atar (internet gerekir).
+
+**Bölüm B (n8n):**
+1. n8n'de `laptop_price_snapshots` adlı Data Table'ı şu kolonlarla oluşturun: `run_ts` (date), `product_key` (string), `product_name` (string), `price` (number), `review_count` (number), `product_link` (string). Tablo workflow ile birlikte taşınmaz; node'lar tabloyu adıyla seçer.
+2. `B-n8n/workflow.json` dosyasını n8n'e import edin (Workflows → Import from File).
+3. Manuel çalıştırın veya aktif edip günlük 08:00 tetikleyicisini bekleyin.
+4. (İsteğe bağlı) Bildirim için Telegram credential'ı ve `chatId` girip iki Telegram node'unu enable edin.
 
 ## Test sonuçları
 
@@ -95,11 +102,18 @@ node A-mesaj-otomasyonu/dogrula.js
   Kanal: WhatsApp 8 · Instagram 7. Sahiplik doğrulanamadı 1 · bulunamayan sipariş 1 · spam 1.
 - `dogrula.js`: tüm kontroller geçti (15 kayıt, 5 alan, enum, boolean, hassas devir, iç API alanı yok, mesaj 1'de canlı sızıntı yok ve not nötr, `mesajlar.json` SHA-256 aynı; `ozet.html` sayıları bağımsız hesapla tutuyor, canlı API'den gelen ürün adı/toplamlar ve mesaj metinleri HTML'de yok).
 
+- **Bölüm B (n8n, local 2.35.7):**
+  - Run 1 (boş tablo, execution 35): success — 20 sayfa, 117 ürün, **117 NEW / 0 PRICE_CHANGED / 0 NO_CHANGE**, 117 satır eklendi.
+  - Run 2 (hemen tekrar, execution 36): success — **0 NEW / 0 PRICE_CHANGED / 117 NO_CHANGE**, bildirim dalına 0 item, toplam 234 satır.
+  - Hata dalı (geçici kopyalarla): geçersiz host → `SITE_UNREACHABLE`, gerçek HTTP 404 → `SITE_UNREACHABLE: HTTP 404`, 0 ürün → `ZERO_PRODUCTS`; üçü de Stop and Error ile **error** bitti, tabloya satır eklenmedi.
+
 ## Bilinen eksikler / takıldığım noktalar
 
 - Sınıflandırma anahtar kelime kurallarına dayanır; verilen 15 mesaj ve testlerdeki varyasyonlar için doğrulandı, ancak farklı yazımlar/argo için kapsam sınırlıdır.
 - DummyJSON genel bir test mağazası; verilen kozmetik terimleri için canlıda sonuç dönmediğinden ürün arama bonusu gerçek veride fallback'te kalıyor (ilgili sonuç kullanımı sahte fetch testleriyle doğrulandı). Türkçe→İngilizce terim eşlemesi bilerek küçük tutuldu.
 - Node 18 üzerinde ayrıca çalıştırılmadı; yalnızca Node 18'de bulunan yerleşik API'ler kullanıldı (test v22.22.3 ile yapıldı).
+- Bölüm B: Telegram credential'ı olmadığı için bildirimler canlı gönderilmedi (node'lar disabled). İlk çalıştırmada 117 NEW bildirimi beklenen davranış (baseline bastırma yok); REMOVED tespiti ve kontrollü PRICE_CHANGED testi henüz yapılmadı.
+- Bölüm B'de karşılaşılan sorunlar (ayrıntı `akis-aciklama.md`): n8n Code sandbox'ında `URL` sınıfı olmadığı için ilk çalıştırmada tüm linkler geçersiz sayıldı (doğrulama hatayı yakaladı, string tabanlı normalizasyonla düzeltildi); site bilinmeyen alt yollar için HTTP 200 (soft-404) döndürdüğünden ilk HTTP hata testi 0 ürün dalına düştü, gerçek 404 URL'siyle tekrar test edildi.
 
 ## AI kullanımı
 
