@@ -1,0 +1,51 @@
+# --- Secret / ortam değişkenleri ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*credentials*.json
+*secret*
+secrets/
+.npmrc
+.netrc
+
+# --- Bağımlılıklar / derleme çıktıları ---
+node_modules/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+dist/
+build/
+.cache/
+
+# --- Log / geçici dosyalar ---
+*.log
+npm-debug.log*
+*.tmp
+*.bak
+*.swp
+*~
+tmp/
+.tmp/
+
+# --- n8n yerel verisi (credential içerebilir) ---
+.n8n/
+*.sqlite
+*.sqlite3
+*.db
+
+# --- İşletim sistemi ---
+.DS_Store
+._*
+Thumbs.db
+desktop.ini
+
+# --- Editör / IDE ---
+.vscode/
+.idea/
+*.code-workspace
+.claude/settings.local.json
