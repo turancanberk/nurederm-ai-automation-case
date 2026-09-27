@@ -106,13 +106,14 @@ node A-mesaj-otomasyonu/dogrula.js
   - Run 1 (boş tablo, execution 35): success — 20 sayfa, 117 ürün, **117 NEW / 0 PRICE_CHANGED / 0 NO_CHANGE**, 117 satır eklendi.
   - Run 2 (hemen tekrar, execution 36): success — **0 NEW / 0 PRICE_CHANGED / 117 NO_CHANGE**, bildirim dalına 0 item, toplam 234 satır.
   - Hata dalı (geçici kopyalarla): geçersiz host → `SITE_UNREACHABLE`, gerçek HTTP 404 → `SITE_UNREACHABLE: HTTP 404`, 0 ürün → `ZERO_PRODUCTS`; üçü de Stop and Error ile **error** bitti, tabloya satır eklenmedi.
+  - Kontrollü PRICE_CHANGED testi (execution 45): **gerçek bir site fiyat değişikliği değil** — yalnız ProBook ürününün en güncel önceki snapshot fiyatı tabloda geçici olarak 739.99 → 689.99 yapıldı; workflow gerçek fiyatı çekince **0 NEW / 1 PRICE_CHANGED / 116 NO_CHANGE** üretti. Test sonrası elle değiştirilen satır 739.99'a geri alındı; workflow'un bu çalıştırmada eklediği gerçek snapshot geçmişte bırakıldı.
 
 ## Bilinen eksikler / takıldığım noktalar
 
 - Sınıflandırma anahtar kelime kurallarına dayanır; verilen 15 mesaj ve testlerdeki varyasyonlar için doğrulandı, ancak farklı yazımlar/argo için kapsam sınırlıdır.
 - DummyJSON genel bir test mağazası; verilen kozmetik terimleri için canlıda sonuç dönmediğinden ürün arama bonusu gerçek veride fallback'te kalıyor (ilgili sonuç kullanımı sahte fetch testleriyle doğrulandı). Türkçe→İngilizce terim eşlemesi bilerek küçük tutuldu.
 - Node 18 üzerinde ayrıca çalıştırılmadı; yalnızca Node 18'de bulunan yerleşik API'ler kullanıldı (test v22.22.3 ile yapıldı).
-- Bölüm B: Telegram credential'ı olmadığı için bildirimler canlı gönderilmedi (node'lar disabled). İlk çalıştırmada 117 NEW bildirimi beklenen davranış (baseline bastırma yok); REMOVED tespiti ve kontrollü PRICE_CHANGED testi henüz yapılmadı.
+- Bölüm B: Telegram credential'ı olmadığı için bildirimler canlı gönderilmedi (node'lar disabled). İlk çalıştırmada 117 NEW bildirimi beklenen davranış (baseline bastırma yok); REMOVED tespiti yapılmadı. Ekran görüntüleri henüz eklenmedi: n8n arayüzü oturum açma istiyor ve kimlik bilgisi yapay zekâ aracına girilmedi.
 - Bölüm B'de karşılaşılan sorunlar (ayrıntı `akis-aciklama.md`): n8n Code sandbox'ında `URL` sınıfı olmadığı için ilk çalıştırmada tüm linkler geçersiz sayıldı (doğrulama hatayı yakaladı, string tabanlı normalizasyonla düzeltildi); site bilinmeyen alt yollar için HTTP 200 (soft-404) döndürdüğünden ilk HTTP hata testi 0 ürün dalına düştü, gerçek 404 URL'siyle tekrar test edildi.
 
 ## AI kullanımı

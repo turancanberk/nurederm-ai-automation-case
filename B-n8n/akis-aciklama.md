@@ -137,6 +137,28 @@ Daily Schedule (08:00)
 
 Hiçbir hata testinde tabloya satır eklenmedi (234 satır korundu).
 
+### Kontrollü PRICE_CHANGED testi (execution 45)
+
+> **Bu gerçek bir site fiyat değişikliği değildi; kontrollü bir testti.** Sitedeki fiyatlar değiştirilmedi.
+
+- Yalnızca **bir ürünün, workflow'un "önceki" olarak seçeceği en güncel snapshot satırı** geçici olarak değiştirildi:
+  - Ürün: **ProBook** — `product_key` `https://webscraper.io/test-sites/e-commerce/static/product/34`
+  - Değiştirilen satır: id 121 (Run 2, `run_ts` 2026-09-27 11:10:25.763 UTC) — gerçek fiyat **739.99** → test fiyatı **689.99**
+  - Aynı ürünün daha eski satırı (id 4, Run 1, 739.99) bilerek değiştirilmedi.
+  - Değişiklik SQLite'a doğrudan değil, n8n'in kendi Data Table **update** node'u ile geçici bir workflow üzerinden yapıldı;
+    filtre `id = 121` **ve** `product_key` **ve** `price = 739.99` (yalnız beklenen satır, beklenen durumdaysa güncellenir).
+- Final workflow gerçek URL ile çalıştırıldı (execution 45, **success**): 20 sayfa, 117 ürün →
+  **0 NEW / 1 PRICE_CHANGED / 116 NO_CHANGE**.
+  - Compare çıktısı: `status: PRICE_CHANGED`, `product_name: ProBook`, `previous_price: 689.99`, `price: 739.99`,
+    `price_diff_pct: 7.25`, `previous_run_ts: 2026-09-27T11:10:25.763Z`.
+  - Eski satır (id 4) hâlâ 739.99 iken 689.99'un seçilmesi, "en güncel önceki kayıt" mantığının doğru çalıştığını da gösterir.
+  - "Has New or Price Changed?" true çıkışında yalnız 1 item (ProBook), false çıkışında 116 item.
+  - Build Change Notification: "Yeni ürün: 0 · Fiyatı değişen: 1 — • ProBook: $689.99 → $739.99 (+7.25%)". Telegram disabled; mesaj gönderilmedi.
+- Test sonrası: elle değiştirilen **id 121 satırı orijinal gerçek fiyatına (739.99) geri getirildi** (aynı yöntemle).
+  Workflow'un bu execution sırasında eklediği **gerçek current snapshot** (117 satır, ProBook için id 238 = 739.99)
+  **geçmişte bırakıldı** — silinmedi. Sonuç: tablo 351 satır (3 çalıştırma × 117); hiçbir ürünün farklı fiyatlı satırı ve 689.99 değerli satır kalmadı.
+- Test için kullanılan geçici workflow arşivlendi; final workflow bu testte değiştirilmedi (repo'daki `workflow.json` ile birebir aynı).
+
 ## 6. Karşılaşılan gerçek sorunlar
 
 1. **Code node sandbox'ında `URL` yok:** İlk Run 1 denemesinde (execution 33) 117 ürünün tamamı geçersiz sayıldı.
@@ -155,5 +177,5 @@ Hiçbir hata testinde tabloya satır eklenmedi (234 satır korundu).
 
 - İlk çalıştırmada bildirimi bastırma (baseline): ilk çalıştırmada 117 NEW bildirimi beklenen davranış.
 - Kaybolan ürün (REMOVED) tespiti.
-- Kontrollü PRICE_CHANGED senaryosu testi ve ekran görüntüleri.
+- Ekran görüntüleri: n8n arayüzü oturum açma gerektirdiği ve kimlik bilgisi yapay zekâ aracına girilmediği için henüz eklenmedi.
 - Data Table büyüdükçe tüm satırları okumak yerine yalnız son `run_ts`'i okumak (üretim notu).

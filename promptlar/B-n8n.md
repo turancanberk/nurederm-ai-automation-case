@@ -835,3 +835,212 @@ Henüz:
 
 yapma.
 ````
+
+---
+
+## 03
+
+````text
+Zorunlu Bölüm B tamamlandı ve iki normal run + error-path testleri geçti.
+
+Şimdi yalnızca kontrollü PRICE_CHANGED senaryosunu gerçek local n8n üzerinde doğrula ve bonus screenshot'ları hazırla.
+
+Bu promptu promptlar/B-n8n.md dosyasına 03 numarayla ve HİÇ DEĞİŞTİRMEDEN ekle.
+
+Bu aşamada:
+- baseline suppression ekleme
+- REMOVED detection ekleme
+- workflow mimarisini yeniden tasarlama
+
+Yapma.
+
+Amaç yalnızca mevcut zorunlu workflow'un PRICE_CHANGED yolunu gerçek execution ile kanıtlamak.
+
+## 1. Kontrollü test yaklaşımı
+
+Gerçek web sitesindeki fiyatı değiştirmiyoruz.
+
+Data Table:
+laptop_price_snapshots
+
+içinde mevcut ürünlerden yalnızca BİR tanesinin en güncel previous snapshot fiyatını geçici olarak değiştir.
+
+Örnek:
+
+gerçek/current fiyat: 699.99
+en güncel previous snapshot: 699.99
+
+test için yalnız previous snapshot:
+699.99 → 649.99
+
+Sonra workflow'u normal gerçek URL ile çalıştır.
+
+Beklenen:
+
+- toplam 117 ürün
+- 0 NEW
+- 1 PRICE_CHANGED
+- 116 NO_CHANGE
+
+Site gerçekten bu sırada değiştiyse gerçek sonucu zorla bu sayılara uydurma; nedenini incele.
+
+## 2. Hangi satırı değiştirdiğini dikkatli seç
+
+Append-only tabloda aynı product_key için birden fazla snapshot var.
+
+Mutlaka workflow'un previous olarak seçeceği EN GÜNCEL önceki satırı değiştir.
+
+Ürünün:
+- product_key
+- product_name
+- gerçek current price
+- test previous price
+
+bilgilerini kaydet.
+
+Mümkünse Data Table'ı programatik/local n8n araçlarıyla değiştir.
+
+Eğer mevcut araçlarla güvenli biçimde row update mümkün değilse DUR ve bana hangi satırı UI'dan değiştirmem gerektiğini açıkça söyle.
+Rastgele eski snapshot değiştirme.
+
+## 3. Workflow çalıştır
+
+Gerçek final workflow'u çalıştır.
+
+Compare Previous vs Current node'unda değiştirdiğimiz ürün için en az:
+
+status: PRICE_CHANGED
+previous_price: testte verdiğimiz eski fiyat
+price: gerçek site fiyatı
+
+görünmeli.
+
+Has New or Price Changed? true kolunda yalnızca değişiklik item'ı / değişiklik özeti bulunmalı.
+
+Build Change Notification çıktısında bu ürün görünmeli.
+
+Telegram disabled kalabilir; gerçek mesaj gönderme.
+
+## 4. Snapshot etkisi
+
+Bu PRICE_CHANGED run doğal olarak Data Table'a yeni ve GERÇEK current fiyatla bir snapshot daha yazabilir.
+
+Bu sorun değil ve test sonucunun geçmiş kaydıdır.
+
+Ancak TEST İÇİN ELLE değiştirdiğimiz eski previous snapshot satırını test sonunda orijinal gerçek fiyatına GERİ DÖNDÜR.
+
+Yani:
+
+- manuel bozduğumuz historical row restore edilecek
+- workflow'un gerçek PRICE_CHANGED execution sırasında eklediği yeni snapshot silinmeyecek
+
+Bu ayrımı açıkça koru.
+
+Restore sonrası Data Table'ın son current snapshot'ının gerçek site fiyatını içerdiğini doğrula.
+
+## 5. Screenshot
+
+B-n8n altında screenshots klasörü oluştur:
+
+B-n8n/screenshots/
+
+İki temiz ekran görüntüsü istiyorum:
+
+1. workflow-success.png
+   - final workflow canvas
+   - normal başarılı akış anlaşılır biçimde görünsün
+   - mümkünse Run 2 gibi NO_CHANGE execution'dan node item sayıları görünür olsun
+
+2. price-changed-test.png
+   - PRICE_CHANGED kontrollü execution
+   - Compare / condition / notification tarafında 1 PRICE_CHANGED olduğu anlaşılır olsun
+   - mümkünse output panelinde:
+     status
+     previous_price
+     price
+     product_name
+     görünsün
+
+Credential, token, encryption key veya başka secret screenshot'ta ASLA görünmesin.
+
+Screenshot alırken Data Table içindeki gereksiz müşteri/secret veri zaten yok ancak local config / terminal / credential ekranı görünmesin.
+
+## 6. Dokümantasyon
+
+akis-aciklama.md içine açıkça yaz:
+
+- bu gerçek site fiyat değişikliği değildi
+- kontrollü bir testti
+- yalnızca bir ürünün en güncel previous snapshot fiyatı geçici olarak değiştirildi
+- workflow gerçek site fiyatını çekince PRICE_CHANGED üretti
+- test sonrası değiştirilmiş historical satır orijinal fiyatına geri getirildi
+- workflow'un test execution sırasında eklediği gerçek current snapshot geçmişte bırakıldı
+
+README'de de bunu 1-2 cümleyle dürüstçe belirt.
+
+## 7. Encryption key kontrolü
+
+Önceki teknik incelemede local ~/.n8n/config içindeki encryptionKey terminale yanlışlıkla basılmıştı.
+
+Gerçek değer:
+- hiçbir repo dosyasına
+- prompt dosyasına
+- workflow.json'a
+- README'ye
+- akis-aciklama.md'ye
+- screenshot'a
+
+girmemiş olmalı.
+
+Gerçek değeri bana veya rapora yazma.
+
+Sadece repository üzerinde secret taraması yap ve "repo içinde bulunmadı" sonucunu raporla.
+
+## 8. Test sonrası kontrol
+
+Mevcut final workflow URL/selectors/config geri dönmüş olmalı.
+
+Final workflow'u PRICE_CHANGED testinden sonra değiştirmediysen tekrar normal run yapmak zorunda değilsin.
+
+Ancak:
+- geçici test workflow kalmadığını
+- yanlış fiyatla bırakılmış historical satır olmadığını
+- workflow export'unun hâlâ gerçek URL'yi kullandığını
+
+doğrula.
+
+## 9. Git
+
+Screenshot ve dokümantasyon tamamlanınca:
+
+git status
+git diff
+secret taraması
+
+yap.
+
+Commit mesajı:
+
+test: fiyat değişikliği senaryosunu doğrula
+
+Remote ekleme.
+Push yapma.
+
+## Sonunda raporla ve DUR
+
+Bana:
+
+1. test edilen ürün adı
+2. gerçek fiyat
+3. geçici previous fiyat
+4. execution id
+5. NEW / PRICE_CHANGED / NO_CHANGE sayıları
+6. Compare node'daki ilgili ürün çıktısı
+7. historical row restore edildi mi
+8. screenshot dosyaları
+9. encryptionKey repo içinde bulunuyor mu (değeri ASLA yazma)
+10. commit hash'i
+11. git status
+
+raporla.
+````
