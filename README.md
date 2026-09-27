@@ -25,7 +25,7 @@ Node.js (harici npm paketi yok, runtime'da LLM/AI API yok). Tüm kararlar determ
 | `A-mesaj-otomasyonu/test.js` | `node:test` birim testleri (sahte fetch; gerçek API'ye gitmez) |
 | `A-mesaj-otomasyonu/dogrula.js` | Üretilen `talepler.json` için bağımsız çıktı doğrulaması (canlı sızıntı kontrolü dahil) |
 | `A-mesaj-otomasyonu/talepler.json` | Çıktı: her mesaj için `{ id, konu, devret, cevap_taslagi, not }` |
-| `A-mesaj-otomasyonu/ozet.html` | Çıktı: toplam, konu bazında sayılar, devredilen sayısı |
+| `A-mesaj-otomasyonu/ozet.html` | Çıktı: tek sayfalık operasyon özeti (aşağıya bakın) |
 
 **Kurallar**
 - **Konu önceliği (çoklu niyet):** `istenmeyen-etki` > `iade-sikayet` > `siparis-durumu` > `fiyat` > `urun-sorusu` > `diger`. İkincil niyet `not` alanına yazılır. Spam mesajlar (ör. takipçi/kısaltılmış link) `diger` olur ve cevap üretilmez.
@@ -35,6 +35,14 @@ Node.js (harici npm paketi yok, runtime'da LLM/AI API yok). Tüm kararlar determ
 - **API hataları:** 404 / "not found" → anlaşılır müşteri mesajı, `devret: false`. Ağ hatası, timeout (8 sn), 5xx, bozuk JSON, beklenmeyen yapı veya yanlış cart id → `devret: true`, teknik detay çıktıya yazılmaz. Tek mesajdaki beklenmeyen hata diğer mesajların işlenmesini durdurmaz.
 - **Fiyat / ürün soruları:** Veri kaynağı olmadığı için fiyat, içerik, cilt uygunluğu vb. bilgi uydurulmaz; temsilci teyidine yönlendirilir. (`/products/search` bonusu henüz eklenmedi.)
 - İngilizce mesajlarda sipariş cevabı İngilizce şablonla yazılır.
+
+**Özet sayfası (`ozet.html`)** — JS/harici bağımlılık olmayan, responsive tek HTML:
+- **Brief zorunluları:** toplam mesaj, konu bazında sayılar (pay %), temsilciye devredilen sayısı.
+- **Kanal dağılımı:** WhatsApp / Instagram.
+- **Devir nedenleri:** sahiplik doğrulanamadı, istenmeyen etki, iade/şikâyet (ve varsa API hatası, çoklu sipariş no vb.).
+- **Güvenlik / operasyon metrikleri:** sahiplik doğrulaması başarısız sipariş, bulunamayan sipariş, spam/alakasız mesaj.
+- **Temsilci kuyruğu:** yalnızca `devret: true` kayıtları — mesaj id, kanal, konu, kısa devir nedeni. Mesaj metni ve sipariş/API detayı gösterilmez.
+- Metrikler, `not` metninden tahmin edilmez; işleme sırasında bilinen dahili durum kodlarından (`tumunuIsleDetayli`) hesaplanır. Bu kodlar `talepler.json`'a yazılmaz (çıktı yine 5 alan). Kanal bilgisi `mesajlar.json`'dan id ile eşleştirilir. Tüm dinamik değerler HTML escape edilir.
 
 ## Bölüm B
 
@@ -60,7 +68,7 @@ node A-mesaj-otomasyonu/dogrula.js
 
 ## Test sonuçları
 
-- `test.js`: **37 test, 37 geçti, 0 başarısız.** 15 mesajın beklenen konusu; `200 ml` / `%100` / URL'nin sipariş no sayılmaması; hassas konuların devri ve tavsiye/teşhis içermemesi; sahiplik eşleşmesi/eşleşmemesi ve sızıntı yokluğu; string/geçersiz `userId`; 404, ağ hatası, HTTP 500/503, bozuk JSON, yanlış cart id, beklenmeyen yapı, timeout; 5 alanlı çıktı şeması; HTML escape.
+- `test.js`: **43 test, 43 geçti, 0 başarısız.** 15 mesajın beklenen konusu; `200 ml` / `%100` / URL'nin sipariş no sayılmaması; hassas konuların devri ve tavsiye/teşhis içermemesi; sahiplik eşleşmesi/eşleşmemesi ve sızıntı yokluğu; string/geçersiz `userId`; 404, ağ hatası, HTTP 500/503, bozuk JSON, yanlış cart id, beklenmeyen yapı, timeout; 5 alanlı çıktı şeması; HTML escape; özet metrikleri (toplam 15, kanal toplamı 15, devredilen 3, kuyrukta yalnızca devredilenler, kuyruk/HTML'de API detayı ve mesaj metni yok, HTML bölümleri, girdi kaynaklı değerlerin escape edilmesi).
 - `isle.js` canlı çalıştırma (15 mesaj):
 
 | id | konu | devret | sonuç |
@@ -78,7 +86,8 @@ node A-mesaj-otomasyonu/dogrula.js
 | 12 | diger | false | genel kargo sorusu, API çağrılmadı |
 
   Dağılım: urun-sorusu 4 · fiyat 2 · siparis-durumu 5 · iade-sikayet 1 · istenmeyen-etki 1 · diger 2 — **devredilen 3** (id 1, 4, 5).
-- `dogrula.js`: tüm kontroller geçti (15 kayıt, 5 alan, enum, boolean, hassas devir, iç API alanı yok, mesaj 1'de canlı sızıntı yok, `mesajlar.json` SHA-256 aynı).
+  Kanal: WhatsApp 8 · Instagram 7. Sahiplik doğrulanamadı 1 · bulunamayan sipariş 1 · spam 1.
+- `dogrula.js`: tüm kontroller geçti (15 kayıt, 5 alan, enum, boolean, hassas devir, iç API alanı yok, mesaj 1'de canlı sızıntı yok ve not nötr, `mesajlar.json` SHA-256 aynı; `ozet.html` sayıları bağımsız hesapla tutuyor, canlı API'den gelen ürün adı/toplamlar ve mesaj metinleri HTML'de yok).
 
 ## Bilinen eksikler / takıldığım noktalar
 

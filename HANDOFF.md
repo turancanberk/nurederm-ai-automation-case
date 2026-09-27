@@ -37,7 +37,9 @@
 - Bölüm A teknoloji kararı: Node.js 18+, harici npm bağımlılığı yok, yerleşik `fetch`, testler `node:test` + `node:assert`, runtime LLM/AI API yok; konu ataması, güvenlik ve sahiplik doğrulaması deterministik.
 - `case-brief.md` teslim artefaktı değil: Git takibinden ve geçmişinden çıkarıldı, `.git/info/exclude` ile yerelde hariç tutuluyor (dosya yerelde duruyor).
 - **Bölüm A zorunlu kısmı tamamlandı:** `kurallar.js`, `isle.js`, `test.js`, `dogrula.js`, `talepler.json`, `ozet.html`.
-  - `test.js`: 37/37 geçti. `dogrula.js`: tüm kontroller geçti.
+  - `test.js`: 43/43 geçti. `dogrula.js`: tüm kontroller geçti (özet HTML kontrolleri dahil).
+  - Sahiplik eşleşmeyen siparişte `not` nötr (başka müşteriye ait olduğu ifşa edilmiyor).
+  - `ozet.html` operasyon özeti: KPI kartları, konu/kanal dağılımı, devir nedenleri, temsilci kuyruğu (WhatsApp 8 · Instagram 7; sahiplik doğrulanamadı 1 · bulunamayan 1 · spam 1).
   - Canlı sonuç: devredilen 3 (id 1, 4, 5); dağılım urun-sorusu 4 · fiyat 2 · siparis-durumu 5 · iade-sikayet 1 · istenmeyen-etki 1 · diger 2.
   - Mesaj 1 (cart 12, sahibi başka müşteri) → sipariş verisi sızmadı, devredildi.
 
@@ -51,11 +53,11 @@
 ## Git durumu
 
 - Branch: `main`, remote yok, push yapılmadı.
-- Commitler: `chore: proje iskeletini ve teslim yapısını hazırla` (case-brief.md çıkarılarak amend edildi), `feat: müşteri mesajı otomasyonunu tamamla`.
+- Commitler: `chore: proje iskeletini ve teslim yapısını hazırla` (case-brief.md çıkarılarak amend edildi), `feat: müşteri mesajı otomasyonunu tamamla`, `fix: sipariş sahipliği notunu güvenli hale getir`, `feat: talep özetini operasyon metrikleriyle geliştir`.
 
 ## Zorunlular bittikten sonra değerlendirilecek
 
-- A özetinde kanal dağılımı, devir nedenleri, başarısız müşteri doğrulama sayısı, bulunamayan sipariş sayısı, spam sayısı.
+- ~~A özetinde kanal dağılımı, devir nedenleri, başarısız müşteri doğrulama sayısı, bulunamayan sipariş sayısı, spam sayısı.~~ (yapıldı)
 - `/products/search` bonusu.
 - n8n first-run/baseline notification suppression.
 - REMOVED ürün tespiti.

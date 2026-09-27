@@ -40,13 +40,18 @@ async function main() {
   kontrol(!talepler.some((t) => /userId|"products"|discountedTotal/.test(JSON.stringify(t))), 'iç API alanları çıktıda yok');
 
   // Canlı sızıntı kontrolü: sahipliği eşleşmeyen her sipariş için içerik çıktıda geçmemeli.
+  // Özet HTML'i için ise hiçbir siparişin (eşleşen dahil) içeriği geçmemeli.
   let eslesmeyen = 0;
+  let bulunamayan = 0;
+  const apiParcalari = [];
   for (const t of talepler.filter((x) => x.konu === 'siparis-durumu')) {
     const m = mesajlar.find((x) => x.id === t.id);
     const nolar = siparisNumaralariCikar(m.mesaj);
     if (nolar.length !== 1) continue;
     const sonuc = await siparisGetir(nolar[0]);
+    if (sonuc.durum === 'bulunamadi') bulunamayan++;
     if (sonuc.durum !== 'ok') continue;
+    apiParcalari.push(...sonuc.cart.products.map((p) => p.title), sonuc.cart.total.toFixed(2), String(sonuc.cart.total));
     if (kimlikParse(sonuc.cart.userId) === kimlikParse(m.musteri_id)) continue;
     eslesmeyen++;
     const json = JSON.stringify(t);
@@ -63,6 +68,30 @@ async function main() {
     );
   }
   console.log(`Bilgi: canlı API'de sahipliği eşleşmeyen sipariş sayısı: ${eslesmeyen}`);
+
+  // ozet.html: sayılar talepler.json + mesajlar.json'dan bağımsız hesapla tutmalı, hassas veri içermemeli.
+  const html = fs.readFileSync(path.join(__dirname, 'ozet.html'), 'utf8');
+  const devredilen = talepler.filter((t) => t.devret).length;
+  const kanal = (k) => mesajlar.filter((m) => m.kanal === k).length;
+  kontrol(html.includes(`Toplam mesaj: <strong>${talepler.length}</strong>`), `ozet.html: toplam mesaj ${talepler.length}`);
+  kontrol(html.includes(`Temsilciye devredilen: <strong>${devredilen}</strong>`), `ozet.html: devredilen ${devredilen}`);
+  kontrol(
+    KONULAR.every((k) => html.includes(`<td class="sayi">${talepler.filter((t) => t.konu === k).length}</td>`)) &&
+      (html.match(/<td class="pay">/g) || []).length === KONULAR.length + 2,
+    'ozet.html: konu ve kanal satırları mevcut',
+  );
+  kontrol(
+    html.includes(`<td>WhatsApp</td><td class="sayi">${kanal('whatsapp')}</td>`) &&
+      html.includes(`<td>Instagram</td><td class="sayi">${kanal('instagram')}</td>`),
+    `ozet.html: kanal dağılımı (WhatsApp ${kanal('whatsapp')}, Instagram ${kanal('instagram')})`,
+  );
+  kontrol(html.includes(`data-metrik="Sahiplik doğrulanamadı">${eslesmeyen}<`), `ozet.html: sahiplik doğrulanamadı ${eslesmeyen}`);
+  kontrol(html.includes(`data-metrik="Bulunamayan sipariş">${bulunamayan}<`), `ozet.html: bulunamayan sipariş ${bulunamayan}`);
+  kontrol((html.match(/<td class="sayi">#\d+<\/td>/g) || []).length === devredilen, `ozet.html: kuyrukta ${devredilen} kayıt`);
+  const htmlSizanlar = apiParcalari.filter((p) => html.includes(p));
+  kontrol(htmlSizanlar.length === 0, `ozet.html: canlı API sipariş içeriği yok (${apiParcalari.length} parça tarandı)`);
+  kontrol(!mesajlar.some((m) => html.includes(m.mesaj)), 'ozet.html: müşteri mesaj metni yok');
+  kontrol(!/userId|products|quantity|<script|https?:\/\//i.test(html), 'ozet.html: API alan adı / script / harici kaynak yok');
 
   console.log(hatalar.length ? `\n${hatalar.length} kontrol BAŞARISIZ` : '\nTüm kontroller geçti');
   process.exitCode = hatalar.length ? 1 : 0;

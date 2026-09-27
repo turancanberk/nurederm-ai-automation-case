@@ -573,3 +573,161 @@ Sonunda:
 
 raporla ve dur.
 ````
+
+---
+
+## 05
+
+````text
+Bölüm A'nın zorunlu kısmı ve güvenlik düzeltmesi tamamlandı.
+
+Şimdi yalnızca A bölümünün operasyonel özetini geliştir.
+Henüz /products/search bonusuna geçme.
+Henüz Bölüm B'ye geçme.
+
+Bu promptu promptlar/A-claude-code.md dosyasına 05 numarayla ve değiştirmeden ekle.
+
+Amaç:
+ozet.html brief'in zorunlu özet gereksinimini korurken, gerçek bir operasyon ekibinin hızlıca kullanabileceği daha okunabilir ve faydalı tek sayfalık bir özet olsun.
+
+## 1. Mevcut zorunlu bilgileri koru
+
+HTML'de mutlaka kalmalı:
+
+- toplam mesaj sayısı
+- konu bazında mesaj sayıları
+- temsilciye devredilen mesaj sayısı
+
+Bunlar brief gereğidir; kaldırma.
+
+## 2. Şu ek operasyon metriklerini ekle
+
+Mümkün olduğunca mevcut işleme sonuçlarından deterministik olarak hesapla:
+
+- kanal dağılımı:
+  - WhatsApp
+  - Instagram
+
+- devir nedenleri:
+  - sipariş sahipliği doğrulanamadı
+  - istenmeyen etki
+  - iade / şikayet
+  - varsa diğer güvenli devir nedenleri
+
+- sahiplik doğrulaması başarısız sipariş sayısı
+
+- bulunamayan sipariş sayısı
+
+- spam / alakasız mesaj sayısı
+
+- temsilci kuyruğu:
+  yalnızca devret=true kayıtları için:
+  - mesaj id
+  - kanal
+  - konu
+  - kısa devir nedeni
+
+Müşteri mesajının tam metnini veya sipariş/API detaylarını bu tabloya koyma.
+
+## 3. Görsel düzen
+
+Framework veya harici dependency kullanma.
+
+Tek HTML dosyası içinde sade CSS kullan.
+
+Daha okunabilir bir operasyon dashboard görünümü oluştur:
+
+- üstte başlık ve kısa açıklama
+- KPI kartları
+- konu dağılımı tablosu
+- kanal dağılımı
+- temsilci kuyruğu
+- mümkünse temiz responsive düzen
+
+Abartılı animasyon, grafik kütüphanesi veya JS kullanma.
+Basit, profesyonel ve okunabilir olsun.
+
+Türkçe metin kullan.
+
+HTML'e dinamik veri yazarken escapeHtml güvenliği korunmalı.
+
+## 4. Hesaplama mantığı
+
+Metrikleri mümkünse `ozetHesapla` içinde üret.
+
+Metin içindeki `not` değerlerini sonradan regex ile tahmin etmek yerine,
+işleme aşamasında zaten bilinen güvenli durumları kullanabiliyorsan bunu tercih et.
+
+Ancak `talepler.json` brief gereği yalnızca şu 5 alanı içermeye devam etmeli:
+
+id
+konu
+devret
+cevap_taslagi
+not
+
+Yeni output alanı ekleme.
+
+Gerekirse özet hesaplama sırasında `mesajlar.json` kanal bilgisiyle talepleri id üzerinden eşleştir.
+
+## 5. Test
+
+Mevcut 37 testi bozma.
+
+Yeni özet metrikleri için en az şu kontrolleri ekle:
+
+- toplam 15
+- kanal toplamları 15 ediyor
+- devredilen sayısı 3
+- temsilci kuyruğunda yalnızca devret=true kayıtları var
+- kuyrukta sipariş ürün adı / toplam / userId gibi API detayı yok
+- HTML temel bölümleri gerçekten içeriyor
+- escapeHtml koruması devam ediyor
+
+Sonra çalıştır:
+
+node A-mesaj-otomasyonu/test.js
+node A-mesaj-otomasyonu/isle.js
+node A-mesaj-otomasyonu/dogrula.js
+
+ozet.html'i üret ve gerçek verilerle metriklerin doğru olduğunu kontrol et.
+
+## 6. README / HANDOFF
+
+README'de Bölüm A özetinin:
+- brief zorunlularını
+- kanal dağılımını
+- devir nedenlerini
+- güvenlik / operasyon metriklerini
+
+gösterdiğini kısa biçimde belirt.
+
+HANDOFF'u güncel tut.
+
+## 7. Git
+
+Diff ve status kontrolünden sonra küçük bir commit oluştur.
+
+Commit mesajı:
+
+feat: talep özetini operasyon metrikleriyle geliştir
+
+Remote ekleme.
+Push yapma.
+
+## Sonunda raporla ve dur
+
+Bana:
+
+1. eklenen metrikleri
+2. yeni test sayısını ve sonucunu
+3. gerçek HTML'deki sayısal özetleri
+4. temsilci kuyruğundaki kayıtları
+5. HTML'de hassas veri bulunmadığını nasıl doğruladığını
+6. commit hash'ini
+7. git status'u
+
+raporla.
+
+Henüz /products/search veya Bölüm B'ye geçme.
+````

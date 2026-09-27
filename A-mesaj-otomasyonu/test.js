@@ -330,3 +330,103 @@ test('özet: toplam, konu sayıları ve devredilen sayısı', () => {
 test('HTML escape', () => {
   assert.equal(K.escapeHtml('<script>"x"&\'y\'</script>'), '&lt;script&gt;&quot;x&quot;&amp;&#39;y&#39;&lt;/script&gt;');
 });
+
+// --- 8. Operasyon özeti ------------------------------------------------------
+
+// Gerçek 15 mesajı, canlı API'yi taklit eden sahte fetch ile uçtan uca işler.
+function sahteDummyJson() {
+  const cartlar = {
+    12: YABANCI_CART, // mesaj 1: musteri_id 7, sahibi başka
+    5: { id: 5, userId: 5, total: 1467.88, products: [{ title: 'GizliUrunGama', quantity: 4 }] },
+    3: { id: 3, userId: 3, total: 1794.85, products: [{ title: 'GizliUrunDelta', quantity: 1 }] },
+    4: { id: 4, userId: 4, total: 689.93, products: [{ title: 'GizliUrunEpsilon', quantity: 3 }] },
+  };
+  return async (url) => {
+    const id = Number(url.split('/').pop());
+    return cartlar[id]
+      ? new Response(JSON.stringify(cartlar[id]), { status: 200 })
+      : new Response(JSON.stringify({ message: `Cart with id '${id}' not found` }), { status: 404 });
+  };
+}
+
+async function gercekOzet() {
+  const sonuclar = await K.tumunuIsleDetayli(MESAJLAR, { fetchImpl: sahteDummyJson() });
+  const talepler = sonuclar.map((s) => s.talep);
+  const durumlar = new Map(sonuclar.map((s) => [s.talep.id, s.durum]));
+  return { talepler, ozet: K.ozetHesapla(talepler, { mesajlar: MESAJLAR, durumlar }) };
+}
+
+test('özet metrikleri: toplam 15, kanal toplamı 15, devredilen 3', async () => {
+  const { talepler, ozet } = await gercekOzet();
+  assert.equal(ozet.toplam, 15);
+  assert.deepEqual(ozet.kanalSayilari, { whatsapp: 8, instagram: 7 });
+  assert.equal(Object.values(ozet.kanalSayilari).reduce((a, b) => a + b, 0), 15);
+  assert.equal(ozet.devredilenSayisi, 3);
+  assert.equal(Object.values(ozet.konuSayilari).reduce((a, b) => a + b, 0), 15);
+  assert.equal(ozet.sahiplikBasarisiz, 1);
+  assert.equal(ozet.bulunamayanSiparis, 1);
+  assert.equal(ozet.spam, 1);
+  assert.deepEqual(ozet.devirNedenleri, {
+    'Sipariş sahipliği doğrulanamadı': 1, 'İstenmeyen etki bildirimi': 1, 'İade / şikâyet': 1,
+  });
+  // Dahili durum bilgisi çıktı kayıtlarına sızmaz.
+  for (const t of talepler) assert.deepEqual(Object.keys(t), ['id', 'konu', 'devret', 'cevap_taslagi', 'not']);
+});
+
+test('temsilci kuyruğu yalnızca devret=true kayıtlarını ve güvenli alanları içerir', async () => {
+  const { talepler, ozet } = await gercekOzet();
+  const devredilenIdler = talepler.filter((t) => t.devret).map((t) => t.id);
+  assert.deepEqual(ozet.kuyruk.map((k) => k.id), devredilenIdler);
+  assert.deepEqual(devredilenIdler, [1, 4, 5]);
+  for (const k of ozet.kuyruk) {
+    assert.deepEqual(Object.keys(k), ['id', 'kanal', 'konu', 'neden']);
+    assert.equal(talepler.find((t) => t.id === k.id).devret, true);
+  }
+  assert.deepEqual(ozet.kuyruk[0], { id: 1, kanal: 'whatsapp', konu: 'siparis-durumu', neden: 'Sipariş sahipliği doğrulanamadı' });
+});
+
+test('kuyrukta ve HTML\'de sipariş/API detayı veya mesaj metni yok', async () => {
+  const { ozet } = await gercekOzet();
+  const html = K.ozetHtml(ozet);
+  for (const metin of [JSON.stringify(ozet.kuyruk), html]) {
+    for (const parca of ['GizliUrun', '37767', '1467.88', '1794.85', '689.93', 'userId', 'products', 'quantity']) {
+      assert.ok(!metin.includes(parca), `sızıntı: "${parca}"`);
+    }
+    for (const m of MESAJLAR) assert.ok(!metin.includes(m.mesaj), `mesaj ${m.id} metni özette`);
+    assert.doesNotMatch(metin, SAHIPLIK_IFSASI);
+  }
+});
+
+test('HTML temel bölümleri ve sayıları içerir; JS / harici kaynak yok', async () => {
+  const { ozet } = await gercekOzet();
+  const html = K.ozetHtml(ozet);
+  for (const bolum of ['Müşteri Mesajları — Talep Özeti', 'Temsilci kuyruğu (3)', 'Konu bazında', 'Kanal dağılımı', 'Devir nedenleri']) {
+    assert.ok(html.includes(bolum), `bölüm eksik: ${bolum}`);
+  }
+  assert.match(html, /Toplam mesaj: <strong>15<\/strong>/);
+  assert.match(html, /Temsilciye devredilen: <strong>3<\/strong>/);
+  assert.match(html, /data-metrik="Sahiplik doğrulanamadı">1</);
+  assert.match(html, /data-metrik="Bulunamayan sipariş">1</);
+  assert.match(html, /data-metrik="Spam \/ alakasız">1</);
+  assert.match(html, /<td>WhatsApp<\/td><td class="sayi">8<\/td>/);
+  assert.match(html, /<td>Instagram<\/td><td class="sayi">7<\/td>/);
+  assert.match(html, /<td>Sipariş durumu<\/td><td class="sayi">5<\/td>/);
+  assert.match(html, /<td class="sayi">#1<\/td><td>WhatsApp<\/td><td>Sipariş durumu<\/td><td>Sipariş sahipliği doğrulanamadı<\/td>/);
+  assert.doesNotMatch(html, /<script|<link|@import|https?:\/\//i);
+});
+
+test('özet HTML\'i girdi kaynaklı değerleri escape eder', () => {
+  const kotu = '<img src=x onerror=alert(1)>';
+  const talepler = [{ id: 1, konu: 'diger', devret: true, cevap_taslagi: '', not: '' }];
+  const ozet = K.ozetHesapla(talepler, { mesajlar: [{ id: 1, kanal: kotu }], durumlar: new Map([[1, 'islenemedi']]) });
+  const html = K.ozetHtml(ozet);
+  assert.ok(!html.includes(kotu));
+  assert.ok(html.includes('&lt;img src=x onerror=alert(1)&gt;'));
+});
+
+test('ek bilgi verilmeden de özet çalışır (geriye uyumluluk)', () => {
+  const ozet = K.ozetHesapla([{ id: 1, konu: 'fiyat', devret: true }]);
+  assert.equal(ozet.toplam, 1);
+  assert.equal(ozet.kuyruk[0].neden, 'Diğer güvenli devir');
+  assert.match(K.ozetHtml(ozet), /Temsilciye devredilen: <strong>1<\/strong>/);
+});

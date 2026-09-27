@@ -5,29 +5,116 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Talep Özeti</title>
   <style>
-    body { font-family: system-ui, sans-serif; max-width: 640px; margin: 2rem auto; padding: 0 1rem; color: #222; }
+    :root { --zemin: #f5f6f8; --kart: #fff; --metin: #1d2330; --soluk: #5d6675; --cizgi: #e2e5ea;
+            --vurgu: #2f5bd3; --uyari: #b45309; --uyari-zemin: #fff7ed; --risk: #b42318; }
+    @media (prefers-color-scheme: dark) {
+      :root { --zemin: #14171d; --kart: #1c2029; --metin: #e6e8ec; --soluk: #9aa3b2; --cizgi: #2c313c;
+              --vurgu: #7c9cf0; --uyari: #f5a524; --uyari-zemin: #2a2213; --risk: #f97066; }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--zemin); color: var(--metin);
+           font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+    main { max-width: 1040px; margin: 0 auto; padding: 32px 16px 48px; }
+    header h1 { margin: 0 0 4px; font-size: 1.6rem; }
+    header p { margin: 0 0 4px; color: var(--soluk); }
+    header .ozet { color: var(--metin); }
+    .kpiler { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin: 24px 0; }
+    .kpi { background: var(--kart); border: 1px solid var(--cizgi); border-radius: 10px; padding: 14px 16px; }
+    .kpi-ad { color: var(--soluk); font-size: .85rem; }
+    .kpi-deger { font-size: 2rem; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.2; }
+    .kpi-not { color: var(--soluk); font-size: .8rem; }
+    .kpi.uyari { background: var(--uyari-zemin); border-color: var(--uyari); }
+    .kpi.uyari .kpi-deger { color: var(--uyari); }
+    .kpi.risk .kpi-deger { color: var(--risk); }
+    .izgara { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; align-items: start; }
+    section { background: var(--kart); border: 1px solid var(--cizgi); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+    section h2 { margin: 0 0 10px; font-size: 1.05rem; }
+    section.kuyruk { border-color: var(--uyari); }
+    .tablo { overflow-x: auto; }
     table { border-collapse: collapse; width: 100%; }
-    th, td { border: 1px solid #ccc; padding: .4rem .6rem; text-align: left; }
-    td:last-child { text-align: right; }
-    .kutu { display: inline-block; margin: 0 1rem 1rem 0; padding: .6rem 1rem; border: 1px solid #ccc; border-radius: 6px; }
+    th, td { padding: 8px 10px; border-bottom: 1px solid var(--cizgi); text-align: left; vertical-align: middle; }
+    th { color: var(--soluk); font-weight: 600; font-size: .8rem; text-transform: uppercase; letter-spacing: .03em; }
+    tr:last-child td { border-bottom: 0; }
+    .sayi { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .pay { white-space: nowrap; color: var(--soluk); font-variant-numeric: tabular-nums; width: 1%; }
+    .cubuk { display: inline-block; width: 80px; height: 6px; margin-right: 8px; vertical-align: middle;
+             background: var(--cizgi); border-radius: 3px; overflow: hidden; }
+    .cubuk span { display: block; height: 100%; background: var(--vurgu); }
+    .bos { color: var(--soluk); text-align: center; }
+    footer { color: var(--soluk); font-size: .8rem; }
   </style>
 </head>
 <body>
-  <h1>Müşteri Mesajları — Talep Özeti</h1>
-  <div class="kutu">Toplam mesaj: <strong>15</strong></div>
-  <div class="kutu">Temsilciye devredilen: <strong>3</strong></div>
-  <h2>Konu bazında</h2>
-  <table>
-    <thead><tr><th>Konu</th><th>Mesaj sayısı</th></tr></thead>
-    <tbody>
-      <tr><td>urun-sorusu</td><td>4</td></tr>
-      <tr><td>fiyat</td><td>2</td></tr>
-      <tr><td>siparis-durumu</td><td>5</td></tr>
-      <tr><td>iade-sikayet</td><td>1</td></tr>
-      <tr><td>istenmeyen-etki</td><td>1</td></tr>
-      <tr><td>diger</td><td>2</td></tr>
-    </tbody>
-  </table>
-  <p>Devredilen mesaj id'leri: 1, 4, 5</p>
+<main>
+  <header>
+    <h1>Müşteri Mesajları — Talep Özeti</h1>
+    <p>WhatsApp ve Instagram mesajlarının otomatik ön işleme sonucu. Hassas konular ve doğrulanamayan siparişler temsilci kuyruğundadır.</p>
+    <p class="ozet">Toplam mesaj: <strong>15</strong> · Temsilciye devredilen: <strong>3</strong></p>
+  </header>
+
+  <div class="kpiler">
+    <div class="kpi "><div class="kpi-ad">Toplam mesaj</div><div class="kpi-deger" data-metrik="Toplam mesaj">15</div><div class="kpi-not">İşlenen mesaj</div></div>
+    <div class="kpi uyari"><div class="kpi-ad">Temsilciye devredilen</div><div class="kpi-deger" data-metrik="Temsilciye devredilen">3</div><div class="kpi-not">devret = true</div></div>
+    <div class="kpi risk"><div class="kpi-ad">Sahiplik doğrulanamadı</div><div class="kpi-deger" data-metrik="Sahiplik doğrulanamadı">1</div><div class="kpi-not">Sipariş detayı paylaşılmadı</div></div>
+    <div class="kpi "><div class="kpi-ad">Bulunamayan sipariş</div><div class="kpi-deger" data-metrik="Bulunamayan sipariş">1</div><div class="kpi-not">Müşteriden no kontrolü istendi</div></div>
+    <div class="kpi "><div class="kpi-ad">Spam / alakasız</div><div class="kpi-deger" data-metrik="Spam / alakasız">1</div><div class="kpi-not">Cevap üretilmedi</div></div>
+  </div>
+
+  <section class="kuyruk">
+    <h2>Temsilci kuyruğu (3)</h2>
+    <div class="tablo"><table>
+      <thead><tr><th class="sayi">Mesaj</th><th>Kanal</th><th>Konu</th><th>Devir nedeni</th></tr></thead>
+      <tbody>
+        <tr><td class="sayi">#1</td><td>WhatsApp</td><td>Sipariş durumu</td><td>Sipariş sahipliği doğrulanamadı</td></tr>
+        <tr><td class="sayi">#4</td><td>Instagram</td><td>İstenmeyen etki</td><td>İstenmeyen etki bildirimi</td></tr>
+        <tr><td class="sayi">#5</td><td>WhatsApp</td><td>İade / şikâyet</td><td>İade / şikâyet</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <div class="izgara">
+    <section>
+      <h2>Konu bazında</h2>
+      <div class="tablo"><table>
+        <thead><tr><th>Konu</th><th class="sayi">Mesaj sayısı</th><th>Pay</th></tr></thead>
+        <tbody>
+          <tr><td>Ürün sorusu</td><td class="sayi">4</td><td class="pay"><span class="cubuk"><span style="width:27%"></span></span>27%</td></tr>
+          <tr><td>Fiyat</td><td class="sayi">2</td><td class="pay"><span class="cubuk"><span style="width:13%"></span></span>13%</td></tr>
+          <tr><td>Sipariş durumu</td><td class="sayi">5</td><td class="pay"><span class="cubuk"><span style="width:33%"></span></span>33%</td></tr>
+          <tr><td>İade / şikâyet</td><td class="sayi">1</td><td class="pay"><span class="cubuk"><span style="width:7%"></span></span>7%</td></tr>
+          <tr><td>İstenmeyen etki</td><td class="sayi">1</td><td class="pay"><span class="cubuk"><span style="width:7%"></span></span>7%</td></tr>
+          <tr><td>Diğer</td><td class="sayi">2</td><td class="pay"><span class="cubuk"><span style="width:13%"></span></span>13%</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <div>
+      <section>
+        <h2>Kanal dağılımı</h2>
+        <div class="tablo"><table>
+          <thead><tr><th>Kanal</th><th class="sayi">Mesaj</th><th>Pay</th></tr></thead>
+          <tbody>
+          <tr><td>WhatsApp</td><td class="sayi">8</td><td class="pay"><span class="cubuk"><span style="width:53%"></span></span>53%</td></tr>
+          <tr><td>Instagram</td><td class="sayi">7</td><td class="pay"><span class="cubuk"><span style="width:47%"></span></span>47%</td></tr>
+          </tbody>
+        </table></div>
+      </section>
+
+      <section>
+        <h2>Devir nedenleri</h2>
+        <div class="tablo"><table>
+          <thead><tr><th>Neden</th><th class="sayi">Mesaj</th></tr></thead>
+          <tbody>
+            <tr><td>Sipariş sahipliği doğrulanamadı</td><td class="sayi">1</td></tr>
+            <tr><td>İstenmeyen etki bildirimi</td><td class="sayi">1</td></tr>
+            <tr><td>İade / şikâyet</td><td class="sayi">1</td></tr>
+          </tbody>
+        </table></div>
+      </section>
+    </div>
+  </div>
+
+  <footer>Müşteri mesaj metinleri ve sipariş/API detayları bu sayfada gösterilmez; ayrıntılar talepler.json içindedir.</footer>
+</main>
 </body>
 </html>
