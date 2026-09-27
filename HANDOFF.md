@@ -50,17 +50,17 @@
   - HTTP Request pagination (`page={{ $pageCount + 1 }}`, bitiş: `rel="next"` yok) geçici test workflow'unda 20 sayfa / 117 kart döndürdü; test workflow'u arşivlendi.
   - Taslak: `B-n8n/akis-aciklama.md`.
 - **Bölüm B zorunlu workflow tamamlandı** (import edilen template workflow `QAneGL7LmmVuAy1G` uyarlandı, 15 node):
-  - Data Table `laptop_price_snapshots` (id `qhlRYllQeTscy8zz`), şu an 351 satır (Run 1 + Run 2 + kontrollü PRICE_CHANGED run).
+  - Data Table `laptop_price_snapshots` (id `qhlRYllQeTscy8zz`), şu an 819 satır (7 çalıştırma: Run 1, Run 2, kontrollü PRICE_CHANGED run ve kullanıcının ekran görüntüsü için yaptığı 4 NO_CHANGE run — exec 47–50).
   - Run 1 (exec 35): 117 NEW; Run 2 (exec 36): 117 NO_CHANGE, bildirim dalına 0 item.
   - Kontrollü PRICE_CHANGED testi (exec 45): ProBook satır id 121 geçici 739.99→689.99 (n8n Data Table update ile) → 0 NEW / 1 PRICE_CHANGED / 116 NO_CHANGE; id 121 739.99'a geri alındı, test run'ının gerçek snapshot'ı (id 238) bırakıldı. Geçici workflow arşivlendi.
   - encryptionKey repo dosyalarında ve git geçmişinde taranarak bulunmadı.
+  - Ekran görüntüleri eklendi (kullanıcı tarafından manuel): `B-n8n/screenshots/workflow-success.png` (exec 50), `price-changed-test.png` (exec 45); secret içermedikleri kontrol edildi.
   - Hata dalı testleri (geçici kopyalar, arşivlendi): exec 41 DNS, 42 HTTP 404, 43 0 ürün → hepsi Stop and Error ile error.
   - Export: `B-n8n/workflow.json` (secret yok, Telegram credential referansı kaldırıldı, chatId yer tutucu; import testi yapıldı).
   - Workflow ayarı `timezone: Europe/Istanbul`; local'de MCP erişimi (`availableInMCP`) açık, export'ta yok.
 
 ## Henüz yapılmayanlar
 
-- Ekran görüntüleri (`B-n8n/screenshots/workflow-success.png`, `price-changed-test.png`): n8n UI oturum açma istiyor; kullanıcının giriş yapması / görüntüleri alması bekleniyor (success: execution 36, PRICE_CHANGED: execution 45).
 - Ek işler (onay bekleniyor): baseline bildirim bastırma, REMOVED tespiti.
 - README bitiş saati.
 - GitHub remote + push (kullanıcı onayı bekleniyor).

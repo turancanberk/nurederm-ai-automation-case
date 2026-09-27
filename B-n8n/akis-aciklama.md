@@ -156,8 +156,22 @@ Hiçbir hata testinde tabloya satır eklenmedi (234 satır korundu).
   - Build Change Notification: "Yeni ürün: 0 · Fiyatı değişen: 1 — • ProBook: $689.99 → $739.99 (+7.25%)". Telegram disabled; mesaj gönderilmedi.
 - Test sonrası: elle değiştirilen **id 121 satırı orijinal gerçek fiyatına (739.99) geri getirildi** (aynı yöntemle).
   Workflow'un bu execution sırasında eklediği **gerçek current snapshot** (117 satır, ProBook için id 238 = 739.99)
-  **geçmişte bırakıldı** — silinmedi. Sonuç: tablo 351 satır (3 çalıştırma × 117); hiçbir ürünün farklı fiyatlı satırı ve 689.99 değerli satır kalmadı.
+  **geçmişte bırakıldı** — silinmedi. Sonuç (test anında): tablo 351 satır (3 çalıştırma × 117); hiçbir ürünün farklı fiyatlı satırı ve 689.99 değerli satır kalmadı.
 - Test için kullanılan geçici workflow arşivlendi; final workflow bu testte değiştirilmedi (repo'daki `workflow.json` ile birebir aynı).
+
+### Ekran görüntüleri (bonus)
+
+Görüntüler n8n arayüzünden kullanıcı tarafından manuel alındı (n8n oturumu gerektirdiği için; kimlik bilgisi yapay zekâ aracına girilmedi).
+İkisi de final workflow'a aittir; credential, token veya başka gizli bilgi içermediği kontrol edildi.
+
+| Dosya | Execution | Ne gösteriyor |
+|---|---|---|
+| [`screenshots/workflow-success.png`](screenshots/workflow-success.png) | 50 (editörden manuel, success) | Final workflow canvas'ı ve normal başarılı akış: 20 sayfa → 117 ürün → Get Previous Snapshot (702 önceki satır) → Compare → Insert Snapshot (117). "Has New or Price Changed?" false kolunda 117 item, true kolu boş → bildirim dalı çalışmıyor. Çıktı panelinde `status: NO_CHANGE`, `price` = `previous_price`. |
+| [`screenshots/price-changed-test.png`](screenshots/price-changed-test.png) | 45 (kontrollü PRICE_CHANGED testi) | Execution listesi + canvas: "Has New or Price Changed?" true kolunda 1 item, Build Change Notification çalışmış. Panelde ProBook için `status: PRICE_CHANGED`, `price: 739.99`, `previous_price: 689.99`, `price_diff_pct: 7.25` ve bildirim mesajı (`new_count: 0`, `price_changed_count: 1`). |
+
+Not: Kullanıcı bu görüntüler için editörden 4 ek çalıştırma yaptı (execution 47–50); hepsi başarılı ve 117 NO_CHANGE.
+Bu nedenle tablo şu an 819 satır (7 çalıştırma × 117); hiçbir üründe farklı fiyatlı satır yok. Listede görünen 11:03 UTC
+(14:03 yerel) tarihli 53 ms'lik hata, uyarlama öncesi orijinal template'in (Google Sheets credential'ı olmadan) çalıştırılmasıdır.
 
 ## 6. Karşılaşılan gerçek sorunlar
 
@@ -177,5 +191,4 @@ Hiçbir hata testinde tabloya satır eklenmedi (234 satır korundu).
 
 - İlk çalıştırmada bildirimi bastırma (baseline): ilk çalıştırmada 117 NEW bildirimi beklenen davranış.
 - Kaybolan ürün (REMOVED) tespiti.
-- Ekran görüntüleri: n8n arayüzü oturum açma gerektirdiği ve kimlik bilgisi yapay zekâ aracına girilmediği için henüz eklenmedi.
 - Data Table büyüdükçe tüm satırları okumak yerine yalnız son `run_ts`'i okumak (üretim notu).

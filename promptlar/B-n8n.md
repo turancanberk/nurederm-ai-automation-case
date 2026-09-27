@@ -1044,3 +1044,45 @@ Bana:
 
 raporla.
 ````
+
+---
+
+## 04
+
+````text
+B-n8n/screenshots/ klasörüne iki manuel ekran görüntüsü ekledim:
+
+- workflow-success.png
+- price-changed-test.png
+
+Bu promptu promptlar/B-n8n.md dosyasına 04 numarayla ve değiştirmeden ekle.
+
+Önce iki screenshot'ı kontrol et.
+
+Şunları doğrula:
+- görüntüler gerçekten final workflow / ilgili execution'lara ait
+- workflow-success.png normal başarılı çalışmayı gösteriyor
+- price-changed-test.png kontrollü PRICE_CHANGED sonucunu gösteriyor
+- credential, token, encryptionKey, parola veya başka secret görünmüyor
+- görüntüler okunabilir
+
+Görüntüler uygunsa:
+- akis-aciklama.md içinde screenshot bölümüne bu iki dosyayı ve ne gösterdiklerini ekle
+- README'de screenshotların B-n8n/screenshots altında bulunduğunu kısa belirt
+- başka workflow davranışını değiştirme
+
+Sonra git status ve diff kontrolü yap.
+
+Commit mesajı:
+docs: n8n çalışma ekran görüntülerini ekle
+
+Remote ekleme veya push yapma.
+
+Sonunda yalnızca:
+- iki screenshot'ın güvenlik kontrolü sonucu
+- dokümantasyonda ne güncellendi
+- commit hash
+- git status
+
+raporla ve dur.
+````

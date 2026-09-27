@@ -55,6 +55,7 @@ n8n workflow'u local n8n **2.35.7** üzerinde kuruldu ve gerçek siteye karşı 
 - **Hata dalı:** site açılamazsa (HTTP hata çıkışı) veya 0 ürün / doğrulama hatası → Build Error Alert → Send Error Alert → **Stop and Error** (execution başarısız biter).
 - **Storage:** n8n Data Table `laptop_price_snapshots` (append-only, tarih damgalı snapshot).
 - **Bildirim:** Telegram node'ları credential olmadığı için disabled; canlı mesaj gönderilmedi, mesaj metinleri execution çıktısında doğrulandı.
+- **Ekran görüntüleri:** [`B-n8n/screenshots/`](B-n8n/screenshots/) — `workflow-success.png` (normal başarılı NO_CHANGE çalıştırması) ve `price-changed-test.png` (kontrollü PRICE_CHANGED testi, execution 45).
 ## Nasıl çalıştırılır
 
 Gereksinim: Node.js 18+ (geliştirme ve test v22.22.3 ile yapıldı). `npm install` gerekmez.
@@ -113,7 +114,7 @@ node A-mesaj-otomasyonu/dogrula.js
 - Sınıflandırma anahtar kelime kurallarına dayanır; verilen 15 mesaj ve testlerdeki varyasyonlar için doğrulandı, ancak farklı yazımlar/argo için kapsam sınırlıdır.
 - DummyJSON genel bir test mağazası; verilen kozmetik terimleri için canlıda sonuç dönmediğinden ürün arama bonusu gerçek veride fallback'te kalıyor (ilgili sonuç kullanımı sahte fetch testleriyle doğrulandı). Türkçe→İngilizce terim eşlemesi bilerek küçük tutuldu.
 - Node 18 üzerinde ayrıca çalıştırılmadı; yalnızca Node 18'de bulunan yerleşik API'ler kullanıldı (test v22.22.3 ile yapıldı).
-- Bölüm B: Telegram credential'ı olmadığı için bildirimler canlı gönderilmedi (node'lar disabled). İlk çalıştırmada 117 NEW bildirimi beklenen davranış (baseline bastırma yok); REMOVED tespiti yapılmadı. Ekran görüntüleri henüz eklenmedi: n8n arayüzü oturum açma istiyor ve kimlik bilgisi yapay zekâ aracına girilmedi.
+- Bölüm B: Telegram credential'ı olmadığı için bildirimler canlı gönderilmedi (node'lar disabled). İlk çalıştırmada 117 NEW bildirimi beklenen davranış (baseline bastırma yok); REMOVED tespiti yapılmadı. Ekran görüntüleri n8n oturumu gerektirdiği için kullanıcı tarafından manuel alındı.
 - Bölüm B'de karşılaşılan sorunlar (ayrıntı `akis-aciklama.md`): n8n Code sandbox'ında `URL` sınıfı olmadığı için ilk çalıştırmada tüm linkler geçersiz sayıldı (doğrulama hatayı yakaladı, string tabanlı normalizasyonla düzeltildi); site bilinmeyen alt yollar için HTTP 200 (soft-404) döndürdüğünden ilk HTTP hata testi 0 ürün dalına düştü, gerçek 404 URL'siyle tekrar test edildi.
 
 ## AI kullanımı
