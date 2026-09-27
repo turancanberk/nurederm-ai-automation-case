@@ -1086,3 +1086,357 @@ Sonunda yalnızca:
 
 raporla ve dur.
 ````
+
+---
+
+## 05
+
+````text
+Zorunlu Bölüm A ve B tamamlandı. Bonus ürün arama, operasyon özeti, gerçek n8n run'ları, error-path testleri ve iki screenshot da mevcut.
+
+Artık YENİ ÖZELLİK EKLEME.
+
+Baseline suppression ve REMOVED detection eklemeyeceğiz.
+Mevcut çalışan mimariyi gereksiz refactor etme.
+
+Şimdi tüm repository için final teslim öncesi audit yap.
+
+Bu promptu promptlar/B-n8n.md dosyasına 05 numarayla ve HİÇ DEĞİŞTİRMEDEN ekle.
+
+Henüz:
+- GitHub remote oluşturma
+- push yapma
+- README bitiş saatini kesinleştirme
+- e-posta gönderme
+
+yapma.
+
+Önce teslim paketinin brief'e birebir uyduğunu doğrula.
+
+## 1. Repository yapısı
+
+Repo kökünü kontrol et.
+
+En az şunlar mevcut olmalı:
+
+README.md
+.gitignore
+mesajlar.json
+
+A-mesaj-otomasyonu/
+  kurallar.js
+  isle.js
+  test.js
+  dogrula.js
+  talepler.json
+  ozet.html
+
+B-n8n/
+  workflow.json
+  akis-aciklama.md
+  screenshots/
+    workflow-success.png
+    price-changed-test.png
+
+promptlar/
+  A-claude-code.md
+  B-n8n.md
+
+HANDOFF.md
+
+case-brief.md:
+- yerelde bulunabilir
+- Git tarafından tracked olmamalı
+- commit geçmişinde bulunmamalı
+
+Gereksiz practice dosyası, tablet workflow'u, eski export, geçici test scripti veya debug çıktısı repo içinde kalmamalı.
+
+Özellikle repo genelinde şu tür eski/practice referanslarını ara:
+
+- case-brief-practice
+- mesajlar-practice
+- tablet_price_snapshots
+- /computers/tablets
+- PRACTICE
+- geçici workflow export isimleri
+
+Gerçek case için bilinçli bir açıklamanın parçası değilse kaldırma gerekip gerekmediğini raporla.
+
+## 2. Bölüm A final doğrulama
+
+Tekrar çalıştır:
+
+node A-mesaj-otomasyonu/test.js
+node A-mesaj-otomasyonu/isle.js
+node A-mesaj-otomasyonu/dogrula.js
+
+Doğrula:
+
+- tüm testler geçiyor
+- 15 kayıt
+- her talepler.json kaydı yalnız:
+  id
+  konu
+  devret
+  cevap_taslagi
+  not
+  alanlarını içeriyor
+- hassas mesajlar devrediliyor
+- mesaj 1 başka müşterinin ürün/toplam/userId bilgisini sızdırmıyor
+- mesaj 1'in not'u sahiplik varlığını gereksiz ifşa etmiyor
+- 404 ile sistem hatası ayrılmış
+- ürün/fiyat cevaplarında uydurma bilgi yok
+- products/search bonusu hatasında ana akış bozulmuyor
+- mesajlar.json değişmemiş
+- ozet.html brief'in zorunlu metriklerini ve ek operasyon metriklerini içeriyor
+
+A tarafında yeni davranış ekleme.
+
+## 3. Bölüm B workflow.json statik audit
+
+workflow.json'u JSON olarak parse et ve tek tek doğrula:
+
+- import edilebilir geçerli JSON
+- Daily Schedule / Cron günde bir kez 08:00
+- Europe/Istanbul timezone ayarı
+- actual laptop URL:
+  https://webscraper.io/test-sites/e-commerce/static/computers/laptops
+- ?page=N pagination
+- pageCount ile sayfa ilerleme
+- rel="next" bitiş mantığı
+- maksimum sayfa sınırı
+- request interval / timeout
+- product_name extraction
+- numeric price
+- review_count
+- product_link
+- product_key
+- Data Table snapshot
+- run_ts
+- previous/current comparison
+- NEW
+- PRICE_CHANGED
+- NO_CHANGE
+- Insert Snapshot
+- yalnız NEW/PRICE_CHANGED notification yolu
+- HTTP/network error branch
+- zero-products error branch
+- Stop and Error
+- Türkçe Sticky Note
+
+Gerçek credential/token/chat id bulunmamalı.
+Yer tutucu değerler açıkça yer tutucu olmalı.
+
+Workflow içinde yanlışlıkla:
+- tablet URL'si
+- practice tablo adı
+- localhost credential
+- test URL'si
+- invalid hostname
+- geçici selector
+
+kalmadığını doğrula.
+
+Final workflow'u değiştirme; yalnız gerçek bir teslim hatası varsa düzeltmeden önce raporla.
+
+## 4. akis-aciklama.md audit
+
+Şunların bulunduğunu doğrula:
+
+- başlangıç template adı:
+  Competitor price monitoring with web scraping,Google Sheets & Telegram
+- template #4640 canonical link
+- template'ten nelerin korunduğu/değiştirildiği/kaldırıldığı
+- actual laptop sitesi
+- 20 sayfa / 117 ürün doğrulaması
+- extraction alanları
+- numeric price
+- Data Table adı ve schema
+- append-only snapshot
+- product_key tercihi
+- NEW / PRICE_CHANGED / NO_CHANGE
+- Run 1 sonucu
+- Run 2 sonucu
+- kontrollü PRICE_CHANGED sonucu
+- bu PRICE_CHANGED testinin gerçek site değişikliği olmadığı açıklaması
+- historical test satırının restore edildiği
+- HTTP/network error testi
+- 0 ürün testi
+- Telegram credential olmadığı ve gerçek mesaj gönderilmediği
+- başka n8n instance'ında Data Table oluşturma/mapping gereksinimi
+- screenshot dosyaları ve neyi gösterdikleri
+
+Execution numaraları ve satır sayıları kendi bağlamlarında çelişmemeli.
+Örneğin "test anındaki 351 satır" ile screenshot sonrası 819 satır birbirine karıştırılmamalı.
+
+## 5. README final audit
+
+README kısa ama yeterli olsun.
+
+Doğrula:
+
+- proje amacı
+- başlangıç zamanı: 2026-09-27 13:00 (+03)
+- bitiş zamanı için henüz final aşamayı bekleyen açık alan varsa bunu raporla
+- nasıl çalıştırılır
+- Bölüm A komutları
+- Bölüm A sonuçları
+- Bölüm B import/kullanım bilgisi
+- template #4640
+- storage/Data Table bilgisi
+- gerçek test sonuçları
+- screenshots
+- bilinen sınırlamalar
+- gerçek Telegram mesajı gönderilmediği
+- başka instance'ta Data Table mapping gerektiği
+- AI kullanımı / prompt kayıtları
+- tamamlanmayan bir şey varsa dürüstçe yazılmış olması
+
+README hiçbir sonucu olduğundan daha iyi göstermesin.
+
+## 6. Prompt günlükleri
+
+A-claude-code.md:
+- 01–06 mevcut mu
+- sıralı mı
+- promptlar değiştirilmeden tutulmuş mu
+
+B-n8n.md:
+- 01–05 mevcut mu
+- sıralı mı
+- başarısız denemeleri veya düzeltme promptlarını silmiş miyiz
+
+Prompt günlüklerinde:
+- gerçek encryptionKey
+- credential
+- parola
+- token
+
+bulunmadığını kontrol et.
+
+## 7. Git geçmişi
+
+Çalıştır:
+
+git status
+git log --oneline --decorate
+
+Commit geçmişinin küçük ve anlamlı kilometre taşları gösterdiğini doğrula.
+
+Özellikle mevcut commitlerin:
+- iskelet
+- A implementation
+- security fix
+- operasyon özeti
+- products/search bonus
+- B teknik doğrulama
+- B workflow
+- PRICE_CHANGED test
+- screenshots
+
+gibi ilerlemeyi gösterdiğini kontrol et.
+
+Commit mesajları Türkçe olmalı.
+
+Henüz history rewrite yapma.
+Gerçek bir problem yoksa commitleri squash/amend etme.
+
+## 8. Secret / kişisel veri taraması
+
+Tüm tracked repository ve mümkünse git geçmişinde şunları ara:
+
+- API key
+- token
+- password
+- credential secret
+- encryptionKey gerçek değeri
+- .env
+- özel credential id / auth header
+- kişisel local filesystem path
+- e-posta/parola gibi gereksiz kişisel bilgiler
+
+Brief'teki teslim e-posta adresinin dokümanda geçmesi secret değildir.
+
+Gerçek encryptionKey değerini ASLA rapora yazma.
+
+Screenshot metadata ve görünür içerik daha önce kontrol edildi; tekrar hızlıca doğrulayabilirsin.
+
+## 9. Brief checklist
+
+case-brief.md dosyasını yerelden tekrar oku fakat commit etme.
+
+Brief'teki maddeleri tek tek checklist olarak kontrol et:
+
+A zorunluları
+A çıktıları
+A güvenlik
+A bonus
+
+B zorunluları
+template adı + link
+pagination
+numeric price
+timestamp storage
+change detection
+notification
+error branch
+workflow.json
+akis-aciklama.md
+screenshots bonus
+
+README
+.gitignore
+prompt kayıtları
+küçük commitler
+GitHub teslimi
+
+GitHub teslimi henüz yapılmadığı için yalnızca onu PENDING olarak işaretle.
+README bitiş saati de final push aşamasına kadar PENDING olabilir.
+
+## 10. Değişiklik politikası
+
+Audit sırasında kritik olmayan:
+- stil
+- isim
+- format
+- yorum
+- refactor
+
+değişikliği yapma.
+
+Sadece teslimi gerçekten bozacak bir problem varsa düzelt.
+
+Bir problem bulursan:
+- önce sebebini belirle
+- minimum fix yap
+- ilgili testleri yeniden çalıştır
+
+Audit sonucunda dosya değişikliği gerekiyorsa küçük commit oluştur:
+
+fix: final teslim denetimindeki eksikleri düzelt
+
+Değişiklik gerekmiyorsa sırf commit olsun diye commit atma.
+
+Remote ekleme.
+Push yapma.
+
+## Sonunda raporla ve DUR
+
+Bana yalnızca:
+
+1. brief checklist sonucu: PASS / PENDING / FAIL
+2. A test sonucu
+3. B workflow statik audit sonucu
+4. README / akis-aciklama tutarlılık sonucu
+5. prompt günlükleri sonucu
+6. secret taraması sonucu
+7. practice/geçici dosya kalıntısı var mı
+8. git log özeti
+9. yapılan herhangi bir final fix varsa ne olduğu + commit hash
+10. git status
+11. GitHub push öncesi kalan maddeler
+
+raporla.
+
+Henüz remote oluşturma veya push yapma.
+````

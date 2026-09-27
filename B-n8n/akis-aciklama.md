@@ -33,6 +33,17 @@ Akış local n8n **2.35.7** üzerinde kuruldu ve gerçek siteye karşı çalış
 | 8 sticky note | Değiştirildi | **Akış Özeti (Sticky Note)** | Tek Türkçe özet notu |
 | — | **Eklendi** | Has Valid Products?, Get Previous Snapshot, Build Error Alert, Send Error Alert via Telegram, Stop and Error | Doğrulama, geçmiş okuma ve hata dalı |
 
+### Kaynak site (canlı doğrulandı)
+
+- URL: https://webscraper.io/test-sites/e-commerce/static/computers/laptops — `?page=N` ile sayfalı, statik HTML.
+- **20 sayfa, 117 ürün** (1–19. sayfalar 6'şar, 20. sayfa 3 ürün); sayfada ayrıca `<p class="item-count">117 items</p>` var.
+- Son sayfa sinyali: 1–19. sayfalarda `a.page-link.next[rel="next"]` var; 20. sayfada "Next" öğesi disabled ve `rel="next"` yok.
+  Sayfa 21 ise 404 değil **HTTP 200 + 0 ürün** döndürdüğü için bitiş "boş yanıt"a değil `rel="next"` yokluğuna bağlandı.
+- Görünen ürün adı 117 üründen 98'inde `...` ile kısaltılmış → tam ad `a.title` elemanının `title` attribute'undan alınır.
+- Fiyatlar `$416.99` biçiminde; ondalık basamak değişken (`$1149`, `$372.7`), binlik ayırıcı yok.
+- Ad benzersiz değil (117 üründe 52 farklı ad), link benzersiz (117/117) → `product_key` = mutlak ürün linki.
+- Her başarılı çalıştırmada (execution 35, 36, 45, 47–50) Normalize & Validate çıktısı: `page_count: 20`, `product_count: 117`, `expected_count: 117`.
+
 ## 2. Akış adım adım
 
 ```

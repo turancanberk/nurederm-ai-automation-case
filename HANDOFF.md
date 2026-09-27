@@ -61,21 +61,22 @@
 
 ## Henüz yapılmayanlar
 
-- Ek işler (onay bekleniyor): baseline bildirim bastırma, REMOVED tespiti.
+- Kapsam dışı bırakıldı (kullanıcı kararı): baseline bildirim bastırma, REMOVED tespiti.
 - README bitiş saati.
 - GitHub remote + push (kullanıcı onayı bekleniyor).
 
 ## Git durumu
 
 - Branch: `main`, remote yok, push yapılmadı.
-- Commitler: `chore: proje iskeletini ve teslim yapısını hazırla` (case-brief.md çıkarılarak amend edildi), `feat: müşteri mesajı otomasyonunu tamamla`, `fix: sipariş sahipliği notunu güvenli hale getir`, `feat: talep özetini operasyon metrikleriyle geliştir`, `feat: ürün arama bonusunu güvenli şekilde ekle`. Bölüm A kapandı. `chore: n8n template ve teknik tasarımı doğrula`, `feat: n8n fiyat takip workflowunu tamamla`.
+- Commitler: `chore: proje iskeletini ve teslim yapısını hazırla` (case-brief.md çıkarılarak amend edildi), `feat: müşteri mesajı otomasyonunu tamamla`, `fix: sipariş sahipliği notunu güvenli hale getir`, `feat: talep özetini operasyon metrikleriyle geliştir`, `feat: ürün arama bonusunu güvenli şekilde ekle`. Bölüm A kapandı. `chore: n8n template ve teknik tasarımı doğrula`, `feat: n8n fiyat takip workflowunu tamamla`, `test: fiyat değişikliği senaryosunu doğrula`, `docs: n8n çalışma ekran görüntülerini ekle`, `fix: final teslim denetimindeki eksikleri düzelt`.
+- Final teslim denetimi (B-05) yapıldı: A 59/59 test + dogrula.js geçti, workflow.json statik denetimi geçti, secret taraması temiz.
 
 ## Zorunlular bittikten sonra değerlendirilecek
 
 - ~~A özetinde kanal dağılımı, devir nedenleri, başarısız müşteri doğrulama sayısı, bulunamayan sipariş sayısı, spam sayısı.~~ (yapıldı)
 - ~~`/products/search` bonusu.~~ (yapıldı)
-- n8n first-run/baseline notification suppression.
-- REMOVED ürün tespiti.
-- Normal başarılı run ve PRICE_CHANGED run ekran görüntüleri.
+- n8n first-run/baseline notification suppression. (kapsam dışı bırakıldı)
+- REMOVED ürün tespiti. (kapsam dışı bırakıldı)
+- ~~Normal başarılı run ve PRICE_CHANGED run ekran görüntüleri.~~ (yapıldı)
 - ~~Türkçe n8n açıklama Sticky Note'u.~~ (yapıldı)
 - README design decisions / production notes.
