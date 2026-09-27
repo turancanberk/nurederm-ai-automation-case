@@ -1440,3 +1440,134 @@ raporla.
 
 Henüz remote oluşturma veya push yapma.
 ````
+
+---
+
+## 06
+
+````text
+Final audit geçti. Artık kod, test veya workflow davranışında yeni özellik/refactor yapma.
+
+Bu promptu promptlar/B-n8n.md dosyasına 06 numarayla ve değiştirmeden ekle.
+
+Şimdi final teslim hazırlığını yap.
+
+## 1. README son kontrolü
+
+README'de yanlışlıkla:
+"hassas mesajlar 1,4,5"
+gibi bir ifade varsa düzelt.
+
+Doğru ayrım:
+- devredilen mesajlar: 1, 4, 5
+- hassas konular: 4 ve 5
+- mesaj 1: sipariş sahipliği doğrulanamadığı için güvenlik nedeniyle devredildi
+
+Başka içerik değiştirme.
+
+## 2. Bitiş saati
+
+Terminalden gerçek yerel tarih/saat bilgisini al.
+
+README'de:
+
+Başlangıç: 2026-09-27 13:00 (+03)
+Bitiş: <gerçek final hazırlık zamanı> (+03)
+
+şeklinde gerçek bitiş saatini yaz.
+
+Bitiş zamanı olarak tahmini saat kullanma.
+
+## 3. Son test / secret kontrolü
+
+Son kez:
+
+node A-mesaj-otomasyonu/test.js
+node A-mesaj-otomasyonu/isle.js
+node A-mesaj-otomasyonu/dogrula.js
+
+çalıştır.
+
+Ardından:
+
+- git status
+- git diff
+- tracked dosyalarda secret/token/password/encryptionKey gerçek değeri araması
+- workflow.json parse kontrolü
+- case-brief.md tracked değil kontrolü
+
+yap.
+
+Yeni problem yoksa yalnız README/prompt/final metadata değişikliklerini commit et.
+
+Commit mesajı:
+
+docs: teslim bilgilerini tamamla
+
+## 4. GitHub
+
+Önce mevcut GitHub auth durumunu kontrol et.
+
+Eğer `gh` CLI authenticated ise:
+
+- yeni PUBLIC repository oluştur
+- uygun, profesyonel ve kısa bir repo adı kullan
+- mevcut local repo'yu remote'a bağla
+- main branch'i push et
+
+Repo adı için öneri:
+nurederm-ai-automation-case
+
+Eğer bu isim doluysa benzer temiz bir isim seç.
+
+Eğer GitHub auth yoksa veya repo oluşturamıyorsan:
+- hiçbir şeyi zorlamadan dur
+- bana hangi manuel adımı yapmam gerektiğini söyle
+
+Force push kullanma.
+
+## 5. Push sonrası doğrulama
+
+Push başarılıysa:
+
+- remote URL'yi göster
+- `git status` temiz mi kontrol et
+- `git log --oneline` ile commitlerin push edildiğini doğrula
+- public repo URL'sinin erişilebilir olduğunu mümkünse kontrol et
+- README, A-mesaj-otomasyonu, B-n8n/workflow.json,
+  B-n8n/akis-aciklama.md, screenshots ve promptlar klasörlerinin repoda bulunduğunu doğrula
+- case-brief.md'nin GitHub'da bulunmadığını doğrula
+- secret bulunmadığını tekrar doğrula
+
+## 6. Mail
+
+Mail gönderme.
+
+Bana gönderilmeye hazır kısa bir mail metni hazırla:
+
+Konu:
+Nurederm AI Automation Case — Canberk
+
+İçerik:
+- kısa selamlama
+- case'in tamamlandığı
+- GitHub repo linki
+- teşekkür / iyi çalışmalar
+
+Abartılı açıklama ekleme.
+
+## Sonunda raporla
+
+1. gerçek bitiş saati
+2. son A test sonucu
+3. final commit hash
+4. GitHub repo URL
+5. push başarılı mı
+6. repo public erişilebilir mi
+7. case-brief.md repoda yok mu
+8. secret scan sonucu
+9. git status
+10. hazır e-posta metni
+
+Eğer GitHub auth yüzünden manuel işlem gerekiyorsa o noktada dur ve bana açık adımlar ver.
+````

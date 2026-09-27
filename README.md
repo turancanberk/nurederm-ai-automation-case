@@ -12,7 +12,7 @@ Girdi dosyası `mesajlar.json` değiştirilmeden kullanılır.
 ## Başlangıç zamanı
 
 - **Başlangıç:** 2026-09-27 13:00 (+03) — resmi case başlangıcı.
-- **Bitiş:** _(final aşamasında gerçek bitiş saatiyle doldurulacak)_
+- **Bitiş:** 2026-09-27 14:47 (+03) — final teslim hazırlığı; terminalden `date` ile alındı.
 
 ## Bölüm A
 
