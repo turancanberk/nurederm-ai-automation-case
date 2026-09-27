@@ -57,6 +57,10 @@ async function main() {
     ].filter((parca) => json.includes(parca));
     kontrol(t.devret === true, `mesaj ${t.id}: sahipliği eşleşmeyen sipariş devredilmiş`);
     kontrol(sizanlar.length === 0, `mesaj ${t.id}: başka müşterinin sipariş içeriği sızmamış (${sizanlar.length} eşleşme)`);
+    kontrol(
+      !/(ait değil|başka(sına| bir)? müşteri|farklı (bir )?müşteri|başkasına ait|another customer|belongs to|not yours)/i.test(t.not + ' ' + t.cevap_taslagi),
+      `mesaj ${t.id}: not / cevap sahiplik sonucunu ifşa etmiyor (nötr)`,
+    );
   }
   console.log(`Bilgi: canlı API'de sahipliği eşleşmeyen sipariş sayısı: ${eslesmeyen}`);
 

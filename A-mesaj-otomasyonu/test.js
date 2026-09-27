@@ -50,6 +50,9 @@ function sizintiYok(talep) {
   }
 }
 
+// Eşleşmeyen siparişte not, siparişin başka bir müşteriye ait olduğunu ifşa etmemeli.
+const SAHIPLIK_IFSASI = /(ait değil|başka(sına| bir)? müşteri|farklı (bir )?müşteri|başkasına ait|another customer|belongs to|not yours)/i;
+
 const TEKNIK_IZLER = /(fetch failed|not found|ECONN|timeout|TypeError|SyntaxError|JSON|HTTP|500|stack|Cart with id)/i;
 
 // --- 1. Sınıflandırma ---------------------------------------------------------
@@ -188,6 +191,8 @@ test('mesaj 1 / sahiplik eşleşmez: devret=true, hiçbir sipariş verisi sızma
   assert.equal(t.devret, true);
   assert.match(t.cevap_taslagi, /doğrulanamadı/);
   sizintiYok(t);
+  assert.doesNotMatch(t.not, SAHIPLIK_IFSASI);
+  assert.doesNotMatch(t.cevap_taslagi, SAHIPLIK_IFSASI);
 });
 
 test('string userId tip edge-case: "5" ile musteri_id 5 eşleşir', async () => {
@@ -200,6 +205,7 @@ test('string musteri_id "7" ile userId 12 eşleşmez', async () => {
   const t = await K.mesajiIsle({ ...mesaj(1), musteri_id: '7' }, { fetchImpl: jsonFetch(YABANCI_CART) });
   assert.equal(t.devret, true);
   sizintiYok(t);
+  assert.doesNotMatch(t.not, SAHIPLIK_IFSASI);
 });
 
 test('geçersiz userId (null / "abc") veriyi göstermeden devredilir', async () => {

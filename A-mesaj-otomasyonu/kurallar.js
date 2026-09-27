@@ -289,7 +289,7 @@ async function siparisMesajiIsle(mesaj, analiz, secenekler) {
   // Sahiplik kontrolü: eşleşmezse sipariş verisinin hiçbir parçası çıktıya girmez.
   if (kimlikParse(sonuc.cart.userId) !== musteriId) {
     return { devret: true, cevap_taslagi: t.eslesmedi,
-      not: `Sipariş sahipliği doğrulanamadı (sipariş bu müşteriye ait değil); sipariş detayı paylaşılmadı, temsilci kimlik doğrulaması yapmalı.${notEk}` };
+      not: `Sipariş sahipliği doğrulanamadı; sipariş detayı paylaşılmadı, temsilci kimlik doğrulaması yapmalı.${notEk}` };
   }
 
   const urunler = sonuc.cart.products

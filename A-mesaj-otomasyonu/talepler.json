@@ -4,7 +4,7 @@
     "konu": "siparis-durumu",
     "devret": true,
     "cevap_taslagi": "Merhaba, paylaştığınız sipariş numarası hesabınızla doğrulanamadı. Güvenliğiniz için sipariş bilgilerini bu kanaldan paylaşamıyoruz; talebiniz müşteri temsilcimize aktarıldı.",
-    "not": "Sipariş sahipliği doğrulanamadı (sipariş bu müşteriye ait değil); sipariş detayı paylaşılmadı, temsilci kimlik doğrulaması yapmalı."
+    "not": "Sipariş sahipliği doğrulanamadı; sipariş detayı paylaşılmadı, temsilci kimlik doğrulaması yapmalı."
   },
   {
     "id": 2,

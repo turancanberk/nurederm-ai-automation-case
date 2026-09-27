@@ -515,3 +515,61 @@ raporla.
 
 Henüz /products/search bonusuna veya Bölüm B'ye geçme.
 ````
+
+---
+
+## 04
+
+````text
+Bölüm A dosyalarını bağımsız olarak tekrar gözden geçirdik. Zorunlu akış ve 37 test geçiyor.
+
+Ancak sahiplik eşleşmeyen siparişte `not` alanında:
+"sipariş bu müşteriye ait değil"
+ifadesi gereksiz biçimde siparişin varlığını / başka bir müşteriye ait olduğunu doğruluyor.
+
+Bu promptu promptlar/A-claude-code.md dosyasına 04 numarayla ve değiştirmeden ekle.
+
+Yalnızca bu güvenlik nüansını düzelt:
+
+1. Sahiplik eşleşmediğinde `not` nötr olsun.
+   Örneğin:
+   "Sipariş sahipliği doğrulanamadı; sipariş detayı paylaşılmadı, temsilci kimlik doğrulaması yapmalı."
+
+   Başka müşteriye ait olduğunu açıkça söyleme.
+   userId, ürün, miktar veya toplam gibi hiçbir sipariş verisini yazma.
+
+2. `cevap_taslagi` mevcut nötr haliyle kalabilir:
+   "hesabınızla doğrulanamadı..." yaklaşımı uygun.
+
+3. test.js'e bu davranışı koruyan bir assertion ekle:
+   - eşleşmeyen siparişte `not` alanı "bu müşteriye ait değil", "başka müşteri" veya benzeri sahiplik sonucunu açıkça ifşa etmesin.
+   - mevcut ürün / toplam / userId sızıntı testleri aynen kalsın.
+
+4. dogrula.js içindeki canlı sızıntı kontrolüne de mümkünse aynı nötr-not kontrolünü ekle.
+
+5. talepler.json'u yeniden üret ve mesaj 1'in not alanının nötr olduğunu doğrula.
+
+6. Tüm testleri tekrar çalıştır:
+   node A-mesaj-otomasyonu/test.js
+   node A-mesaj-otomasyonu/isle.js
+   node A-mesaj-otomasyonu/dogrula.js
+
+Başka davranışı değiştirme.
+Henüz bonus /products/search veya Bölüm B'ye geçme.
+
+Git diff ve status'u kontrol ettikten sonra küçük bir commit oluştur.
+
+Commit mesajı:
+fix: sipariş sahipliği notunu güvenli hale getir
+
+Remote ekleme veya push yapma.
+
+Sonunda:
+- değişen satırları,
+- test sonucunu,
+- mesaj 1'in yeni not metnini,
+- commit hash'ini,
+- git status'u
+
+raporla ve dur.
+````
