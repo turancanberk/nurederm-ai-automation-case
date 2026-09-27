@@ -1571,3 +1571,96 @@ Abartılı açıklama ekleme.
 
 Eğer GitHub auth yüzünden manuel işlem gerekiyorsa o noktada dur ve bana açık adımlar ver.
 ````
+
+---
+
+## 07
+
+````text
+README.md içindeki Bölüm A canlı sonuç tablosunda mesaj 1 için geçen:
+
+"cart 12 başka müşteriye ait → bilgi verilmedi"
+
+ifadesini güvenlik yaklaşımımızla tutarlı olacak şekilde:
+
+"cart 12 sahiplik doğrulaması başarısız → bilgi verilmedi"
+
+olarak değiştir.
+
+Başka hiçbir dosya veya davranışa dokunma.
+
+Commit:
+docs: güvenlik açıklamasını nötrleştir
+
+Ardından main'e normal push yap ve git status'un temiz olduğunu doğrula.
+````
+
+---
+
+## 08
+
+````text
+Prompt günlüğünde eksik kalan son iki kaydı tamamla.
+
+Bu işlemde kod, README, workflow, akis-aciklama.md, HANDOFF veya başka herhangi bir teslim dosyasını değiştirme.
+
+## 1. Eksik Prompt 07
+
+Bir önceki işlemde sana verdiğim fakat "başka hiçbir dosyaya dokunma" talimatı nedeniyle prompt günlüğüne eklemediğin şu promptu:
+
+README.md içindeki Bölüm A canlı sonuç tablosunda mesaj 1 için geçen:
+
+"cart 12 başka müşteriye ait → bilgi verilmedi"
+
+ifadesini güvenlik yaklaşımımızla tutarlı olacak şekilde:
+
+"cart 12 sahiplik doğrulaması başarısız → bilgi verilmedi"
+
+olarak değiştir.
+
+Başka hiçbir dosya veya davranışa dokunma.
+
+Commit:
+docs: güvenlik açıklamasını nötrleştir
+
+Ardından main'e normal push yap ve git status'un temiz olduğunu doğrula.
+
+promptlar/B-n8n.md dosyasına 07 numarayla ve HİÇ DEĞİŞTİRMEDEN ekle.
+
+## 2. Bu mevcut promptu da kaydet
+
+Şu anda sana gönderdiğim bu promptun tamamını da
+promptlar/B-n8n.md dosyasına 08 numarayla ve HİÇ DEĞİŞTİRMEDEN ekle.
+
+Böylece AI ile çalışma boyunca verilen tüm promptlar sıralı olarak kayıtlı olacak.
+
+## 3. Kontrol
+
+Doğrula:
+
+- B-n8n.md içinde 01–08 sıralı
+- 07 önceki README güvenlik düzeltme promptunun birebir hali
+- 08 bu mevcut promptun birebir hali
+- başka dosyada değişiklik yok
+- secret / credential / encryptionKey gerçek değeri yok
+
+Yalnızca promptlar/B-n8n.md değişmeli.
+
+Commit mesajı:
+
+docs: eksik prompt kayıtlarını tamamla
+
+Normal şekilde main'e push et.
+Force push yapma.
+
+Sonunda yalnızca:
+- 07 ve 08'in eklendiğini
+- başka dosya değişmediğini
+- commit hash'ini
+- push sonucunu
+- git status'u
+
+raporla.
+
+Bu işlemden sonra projede başka değişiklik yapma.
+````
